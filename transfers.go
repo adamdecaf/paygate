@@ -249,18 +249,18 @@ func createUserTransfers(eventRepo eventRepository, transferRepo transferReposit
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 
+		// don't render surrounding array for single transfer create
+		// (it's coming from POST /transfers, not POST /transfers/batch)
 		if len(requests) == 1 {
-			// don't render surrounding array for single transfer create
-			// (it's coming from POST /transfers, not POST /transfers/batch)
 			if err := json.NewEncoder(w).Encode(transfers[0]); err != nil {
 				internalError(w, err, "createUserTransfers")
 				return
 			}
-		}
-
-		if err := json.NewEncoder(w).Encode(transfers); err != nil {
-			internalError(w, err, "createUserTransfers")
-			return
+		} else {
+			if err := json.NewEncoder(w).Encode(transfers); err != nil {
+				internalError(w, err, "createUserTransfers")
+				return
+			}
 		}
 
 		eventRepo.writeEvent(userId, &Event{
