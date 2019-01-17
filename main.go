@@ -24,6 +24,7 @@ import (
 	"github.com/go-kit/kit/metrics/prometheus"
 	"github.com/gorilla/mux"
 	"github.com/mattn/go-sqlite3"
+	"github.com/RealImage/qledger-sdk-go"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
@@ -94,6 +95,12 @@ func main() {
 	} else {
 		logger.Log("ach", "Pong successful to ACH service")
 	}
+
+	// Check QLedger health
+	_ = ledger.NewLedger(getQLedgerAddress(), "moov") // TODO(adam): auth token from env
+	// if ledgerAPI == nil { // TODO(adam): use nil check after https://github.com/RealImage/qledger-sdk-go/pull/2
+	// 	panic("Unable to load QLedger")
+	// }
 
 	// Create HTTP handler
 	handler := mux.NewRouter()
