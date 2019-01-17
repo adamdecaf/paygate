@@ -24,6 +24,8 @@ var serviceBinds = map[string]string{
 	"auth":    ":8081",
 	"paygate": ":8082",
 	"x9":      ":8083",
+	"ofac":    ":8084",
+	"gl":      ":8085",
 }
 
 // HTTP returns the local bind address for a Moov service.
