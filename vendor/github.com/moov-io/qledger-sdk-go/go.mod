@@ -1,4 +1,4 @@
-module github.com/RealImage/qledger-sdk-go
+module github.com/moov-io/qledger-sdk-go
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect

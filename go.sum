@@ -1,5 +1,3 @@
-github.com/RealImage/qledger-sdk-go v0.0.0-20190116133036-f7ad73e7c43b h1:eqVs1eyqELdDomfeJtTKh4/S6WZryRNpFlUpLmUUrp8=
-github.com/RealImage/qledger-sdk-go v0.0.0-20190116133036-f7ad73e7c43b/go.mod h1:mCYrUWcaP7/izDzfh9Y8pJkbQBfwveVbPVY/SgJlSvE=
 github.com/VividCortex/gohistogram v1.0.0 h1:6+hBz+qvs0JOrrNhhmR7lFxo5sINxBCGXrdtl/UvroE=
 github.com/VividCortex/gohistogram v1.0.0/go.mod h1:Pf5mBqqDxYaXu3hDrrU+w6nw50o/4+TcAqDqk/vUH7g=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
@@ -42,8 +40,10 @@ github.com/matttproud/golang_protobuf_extensions v1.0.1/go.mod h1:D8He9yQNgCq6Z5
 github.com/moov-io/ach v0.6.0-rc6.0.20190114173126-5aaab62608de h1:ZtoTLspeNXnm2IdLdvCz+mmri1xn5krgGGa2TsEMoW8=
 github.com/moov-io/ach v0.6.0-rc6.0.20190114173126-5aaab62608de/go.mod h1:1h+HTHDgqq/iDBfuVbEdYmRySYP9qQIcLmr1fOW+xwI=
 github.com/moov-io/base v0.3.1/go.mod h1:pPu/TAc9PkaaegbREVEeDHsGqyAlvji9vqTuARuAnd0=
-github.com/moov-io/base v0.5.0 h1:g9U4X6hr6KhxGCSu0/FyQUuq4ae/Pj1989lx59o/XY4=
-github.com/moov-io/base v0.5.0/go.mod h1:pPu/TAc9PkaaegbREVEeDHsGqyAlvji9vqTuARuAnd0=
+github.com/moov-io/base v0.5.1 h1:DtESY9CdOVX36uyWBmkwAzXah9qRpmWMffBlnRIqKCU=
+github.com/moov-io/base v0.5.1/go.mod h1:pPu/TAc9PkaaegbREVEeDHsGqyAlvji9vqTuARuAnd0=
+github.com/moov-io/qledger-sdk-go v0.0.0-20190119001622-f63984d2825f h1:jEx4ipGhO/9SqnQ07aHTn/5+P1gw7wZROIabHnrXrvI=
+github.com/moov-io/qledger-sdk-go v0.0.0-20190119001622-f63984d2825f/go.mod h1:z/7rxS9IZjS2ijBMJEnwSrUHGVH0yyVH4YCjf6kI5qw=
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
