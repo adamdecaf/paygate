@@ -19,12 +19,12 @@ import (
 	"github.com/moov-io/base/http/bind"
 	"github.com/moov-io/paygate/internal/version"
 	"github.com/moov-io/paygate/pkg/achclient"
+	ledger "github.com/moov-io/qledger-sdk-go"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/prometheus"
 	"github.com/gorilla/mux"
 	"github.com/mattn/go-sqlite3"
-	"github.com/RealImage/qledger-sdk-go"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
@@ -97,10 +97,18 @@ func main() {
 	}
 
 	// Check QLedger health
-	_ = ledger.NewLedger(getQLedgerAddress(), "moov") // TODO(adam): auth token from env
-	// if ledgerAPI == nil { // TODO(adam): use nil check after https://github.com/RealImage/qledger-sdk-go/pull/2
-	// 	panic("Unable to load QLedger")
-	// }
+	var ledgerAPI *ledger.Ledger
+	if token := os.Getenv("QLEDGER_TOKEN"); token == "" {
+		token = "moov" // Local dev default
+	} else {
+		addr := getQLedgerAddress()
+		ledgerAPI = ledger.NewLedger(addr, token)
+		if err := ledgerAPI.Ping(); err != nil {
+			panic(fmt.Errorf("ERROR: problem connecting to QLedger at %s: %v", addr, err))
+		} else {
+			logger.Log("main", fmt.Sprintf("QLedger is running at %s", addr))
+		}
+	}
 
 	// Create HTTP handler
 	handler := mux.NewRouter()
