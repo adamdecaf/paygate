@@ -22,6 +22,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
+	ledger "github.com/moov-io/qledger-sdk-go"
 )
 
 type TransferID string
@@ -215,12 +216,12 @@ type WEBPaymentType string
 // 	WEBReoccurring WEBPaymentType = "Reoccurring"
 // )
 
-func addTransfersRoute(r *mux.Router, custRepo customerRepository, depRepo depositoryRepository, eventRepo eventRepository, origRepo originatorRepository, transferRepo transferRepository) {
+func addTransfersRoute(r *mux.Router, ledgerAPI *ledger.Ledger, custRepo customerRepository, depRepo depositoryRepository, eventRepo eventRepository, origRepo originatorRepository, transferRepo transferRepository) {
 	r.Methods("GET").Path("/transfers").HandlerFunc(getUserTransfers(transferRepo))
 	r.Methods("GET").Path("/transfers/{transferId}").HandlerFunc(getUserTransfer(transferRepo))
 
-	r.Methods("POST").Path("/transfers").HandlerFunc(createUserTransfers(custRepo, depRepo, eventRepo, origRepo, transferRepo))
-	r.Methods("POST").Path("/transfers/batch").HandlerFunc(createUserTransfers(custRepo, depRepo, eventRepo, origRepo, transferRepo))
+	r.Methods("POST").Path("/transfers").HandlerFunc(createUserTransfers(ledgerAPI, custRepo, depRepo, eventRepo, origRepo, transferRepo))
+	r.Methods("POST").Path("/transfers/batch").HandlerFunc(createUserTransfers(ledgerAPI, custRepo, depRepo, eventRepo, origRepo, transferRepo))
 
 	r.Methods("DELETE").Path("/transfers/{transferId}").HandlerFunc(deleteUserTransfer(transferRepo))
 
@@ -313,7 +314,7 @@ func readTransferRequests(r *http.Request) ([]*transferRequest, error) {
 	return requests, nil
 }
 
-func createUserTransfers(custRepo customerRepository, depRepo depositoryRepository, eventRepo eventRepository, origRepo originatorRepository, transferRepo transferRepository) http.HandlerFunc {
+func createUserTransfers(ledgerAPI *ledger.Ledger, custRepo customerRepository, depRepo depositoryRepository, eventRepo eventRepository, origRepo originatorRepository, transferRepo transferRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "createUserTransfers")
 		if err != nil {
@@ -352,6 +353,14 @@ func createUserTransfers(custRepo customerRepository, depRepo depositoryReposito
 				// Respond back to user
 				moovhttp.Problem(w, fmt.Errorf("Missing data to create transfer: %s", err))
 				return
+			}
+
+			// quick QLedger API call
+			txId, err := qledgerExampleA(ledgerAPI, cust, custDep, orig, origDep)
+			if err != nil {
+				logger.Log("transfers", fmt.Sprintf("ERROR: with QLedger call (transaction=%s): %v", txId, err))
+			} else {
+				logger.Log("transfers", fmt.Sprintf("QLedger call worked! transaction=%s", txId))
 			}
 
 			// Save Transfer object

@@ -97,17 +97,16 @@ func main() {
 	}
 
 	// Check QLedger health
-	var ledgerAPI *ledger.Ledger
-	if token := os.Getenv("QLEDGER_TOKEN"); token == "" {
-		token = "moov" // Local dev default
+	var qledgerToken string
+	if qledgerToken = os.Getenv("QLEDGER_TOKEN"); qledgerToken == "" {
+		qledgerToken = "moov" // Local dev default
+	}
+	addr := getQLedgerAddress()
+	ledgerAPI := ledger.NewLedger(addr, qledgerToken)
+	if err := ledgerAPI.Ping(); err != nil {
+		panic(fmt.Errorf("ERROR: problem connecting to QLedger at %s: %v", addr, err))
 	} else {
-		addr := getQLedgerAddress()
-		ledgerAPI = ledger.NewLedger(addr, token)
-		if err := ledgerAPI.Ping(); err != nil {
-			panic(fmt.Errorf("ERROR: problem connecting to QLedger at %s: %v", addr, err))
-		} else {
-			logger.Log("main", fmt.Sprintf("QLedger is running at %s", addr))
-		}
+		logger.Log("main", fmt.Sprintf("QLedger is running at %s", addr))
 	}
 
 	// Create HTTP handler
@@ -118,7 +117,7 @@ func main() {
 	addGatewayRoutes(handler, gatewaysRepo)
 	addOriginatorRoutes(handler, depositoryRepo, originatorsRepo)
 	addPingRoute(handler)
-	addTransfersRoute(handler, customerRepo, depositoryRepo, eventRepo, originatorsRepo, transferRepo)
+	addTransfersRoute(handler, ledgerAPI, customerRepo, depositoryRepo, eventRepo, originatorsRepo, transferRepo)
 
 	// Listen for application termination.
 	errs := make(chan error)
