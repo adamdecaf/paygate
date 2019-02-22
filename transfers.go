@@ -175,6 +175,7 @@ const (
 	TransferFailed    TransferStatus = "failed"
 	TransferPending   TransferStatus = "pending"
 	TransferProcessed TransferStatus = "processed"
+
 	TransferReclaimed TransferStatus = "reclaimed"
 )
 
@@ -336,7 +337,7 @@ func createUserTransfers(custRepo customerRepository, depRepo depositoryReposito
 		ach := achclient.New(userId, logger)
 
 		for i := range requests {
-			id, req := nextID(), requests[i]
+			id, req := base.ID(), requests[i]
 			if err := req.missingFields(); err != nil {
 				moovhttp.Problem(w, err)
 				return
@@ -594,7 +595,7 @@ func (r *sqliteTransferRepo) createUserTransfers(userId string, requests []*tran
 	now := time.Now()
 	var status TransferStatus = TransferPending
 	for i := range requests {
-		req, transferId := requests[i], nextID()
+		req, transferId := requests[i], base.ID()
 		xfer := &Transfer{
 			ID:                     TransferID(transferId),
 			Type:                   req.Type,
@@ -802,7 +803,7 @@ func checkACHFile(client *achclient.ACH, fileId, userId string) error {
 
 func writeTransferEvent(userId string, req *transferRequest, eventRepo eventRepository) error {
 	return eventRepo.writeEvent(userId, &Event{
-		ID:      EventID(nextID()),
+		ID:      EventID(base.ID()),
 		Topic:   fmt.Sprintf("%s transfer to %s", req.Type, req.Description),
 		Message: req.Description,
 		Type:    TransferEvent,

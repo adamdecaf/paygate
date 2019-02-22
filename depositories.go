@@ -263,7 +263,7 @@ func createUserDepository(logger log.Logger, ofacClient OFACClient, depositoryRe
 
 		userId, now := moovhttp.GetUserId(r), time.Now()
 		depository := &Depository{
-			ID:            DepositoryID(nextID()),
+			ID:            DepositoryID(base.ID()),
 			BankName:      req.BankName,
 			Holder:        req.Holder,
 			HolderType:    req.HolderType,

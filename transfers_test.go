@@ -13,6 +13,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/moov-io/base"
+
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
@@ -27,7 +29,7 @@ func TestTransfers__transferRequest(t *testing.T) {
 func TestTransfer__validate(t *testing.T) {
 	amt, _ := NewAmount("USD", "27.12")
 	transfer := &Transfer{
-		ID:                     TransferID(nextID()),
+		ID:                     TransferID(base.ID()),
 		Type:                   PullTransfer,
 		Amount:                 *amt,
 		Originator:             OriginatorID("originator"),
@@ -74,7 +76,7 @@ func TestTransferType__json(t *testing.T) {
 	}
 
 	// make sure other values fail
-	in := []byte(fmt.Sprintf(`"%v"`, nextID()))
+	in := []byte(fmt.Sprintf(`"%v"`, base.ID()))
 	if err := json.Unmarshal(in, &tt); err == nil {
 		t.Error("expected error")
 	}
@@ -100,7 +102,7 @@ func TestTransferStatus__json(t *testing.T) {
 	}
 
 	// make sure other values fail
-	in := []byte(fmt.Sprintf(`"%v"`, nextID()))
+	in := []byte(fmt.Sprintf(`"%v"`, base.ID()))
 	if err := json.Unmarshal(in, &ts); err == nil {
 		t.Error("expected error")
 	}
@@ -196,7 +198,7 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 	}
 
 	amt, _ := NewAmount("USD", "12.42")
-	userId := nextID()
+	userId := base.ID()
 	req := &transferRequest{
 		Type:                   PushTransfer,
 		Amount:                 *amt,
@@ -270,7 +272,7 @@ func TestTransfers__writeResponse(t *testing.T) {
 		Description:            "money",
 		StandardEntryClassCode: "PPD",
 		fileId:                 "test-file",
-	}.asTransfer(nextID()))
+	}.asTransfer(base.ID()))
 
 	// Respond with one transfer, shouldn't be wrapped in an array
 	writeResponse(w, 1, transfers)

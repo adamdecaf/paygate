@@ -40,7 +40,7 @@ func TestCustomerStatus__json(t *testing.T) {
 	}
 
 	// make sure other values fail
-	in := []byte(fmt.Sprintf(`"%v"`, nextID()))
+	in := []byte(fmt.Sprintf(`"%v"`, base.ID()))
 	if err := json.Unmarshal(in, &cs); err == nil {
 		t.Error("expected error")
 	}
@@ -91,8 +91,8 @@ func TestCustomers__emptyDB(t *testing.T) {
 		log: log.NewNopLogger(),
 	}
 
-	userId := nextID()
-	if err := r.deleteUserCustomer(CustomerID(nextID()), userId); err != nil {
+	userId := base.ID()
+	if err := r.deleteUserCustomer(CustomerID(base.ID()), userId); err != nil {
 		t.Errorf("expected no error, but got %v", err)
 	}
 
@@ -106,7 +106,7 @@ func TestCustomers__emptyDB(t *testing.T) {
 	}
 
 	// specific customer
-	cust, err := r.getUserCustomer(CustomerID(nextID()), userId)
+	cust, err := r.getUserCustomer(CustomerID(base.ID()), userId)
 	if err != nil {
 		t.Error(err)
 	}
@@ -123,12 +123,12 @@ func TestCustomers__upsert(t *testing.T) {
 	defer db.close()
 
 	r := &sqliteCustomerRepo{db.db, log.NewNopLogger()}
-	userId := nextID()
+	userId := base.ID()
 
 	cust := &Customer{
-		ID:                CustomerID(nextID()),
+		ID:                CustomerID(base.ID()),
 		Email:             "test@moov.io",
-		DefaultDepository: DepositoryID(nextID()),
+		DefaultDepository: DepositoryID(base.ID()),
 		Status:            CustomerVerified,
 		Metadata:          "extra data",
 		Created:           base.NewTime(time.Now()),
@@ -178,7 +178,7 @@ func TestCustomers__upsert(t *testing.T) {
 	}
 
 	// update, verify default depository changed
-	depositoryId := DepositoryID(nextID())
+	depositoryId := DepositoryID(base.ID())
 	cust.DefaultDepository = depositoryId
 	if err := r.upsertUserCustomer(userId, cust); err != nil {
 		t.Error(err)
@@ -198,12 +198,12 @@ func TestCustomers__upsert2(t *testing.T) {
 	defer db.close()
 
 	r := &sqliteCustomerRepo{db.db, log.NewNopLogger()}
-	userId := nextID()
+	userId := base.ID()
 
 	cust := &Customer{
-		ID:                CustomerID(nextID()),
+		ID:                CustomerID(base.ID()),
 		Email:             "test@moov.io",
-		DefaultDepository: DepositoryID(nextID()),
+		DefaultDepository: DepositoryID(base.ID()),
 		Status:            CustomerUnverified,
 		Metadata:          "extra data",
 		Created:           base.NewTime(time.Now()),
@@ -217,7 +217,7 @@ func TestCustomers__upsert2(t *testing.T) {
 		t.Error(err)
 	}
 
-	cust.DefaultDepository = DepositoryID(nextID())
+	cust.DefaultDepository = DepositoryID(base.ID())
 	cust.Status = CustomerVerified
 	if err := r.upsertUserCustomer(userId, cust); err != nil {
 		t.Error(err)
@@ -243,12 +243,12 @@ func TestCustomers__delete(t *testing.T) {
 	defer db.close()
 
 	r := &sqliteCustomerRepo{db.db, log.NewNopLogger()}
-	userId := nextID()
+	userId := base.ID()
 
 	cust := &Customer{
-		ID:                CustomerID(nextID()),
+		ID:                CustomerID(base.ID()),
 		Email:             "test@moov.io",
-		DefaultDepository: DepositoryID(nextID()),
+		DefaultDepository: DepositoryID(base.ID()),
 		Status:            CustomerVerified,
 		Metadata:          "extra data",
 		Created:           base.NewTime(time.Now()),
@@ -290,9 +290,9 @@ func TestCustomers_OFACMatch(t *testing.T) {
 	depRepo := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
 
 	// Write Depository to repo
-	userId := nextID()
+	userId := base.ID()
 	dep := &Depository{
-		ID:            DepositoryID(nextID()),
+		ID:            DepositoryID(base.ID()),
 		BankName:      "bank name",
 		Holder:        "holder",
 		HolderType:    Individual,

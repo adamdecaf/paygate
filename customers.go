@@ -193,7 +193,7 @@ func createUserCustomer(ofacClient OFACClient, customerRepo customerRepository, 
 
 		// Create our customer
 		customer := &Customer{
-			ID:                CustomerID(nextID()),
+			ID:                CustomerID(base.ID()),
 			Email:             req.Email,
 			DefaultDepository: req.DefaultDepository,
 			Status:            CustomerUnverified,
