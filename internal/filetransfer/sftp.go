@@ -269,19 +269,20 @@ func (agent *SFTPTransferAgent) UploadFile(f File) error {
 	}
 
 	// Take the base of f.Filename and our (out of band) OutboundPath to avoid accepting a write like '../../../../etc/passwd'.
-	fd, err := agent.client.Create(filepath.Join(agent.cfg.OutboundPath, filepath.Base(f.Filename)))
+	path := filepath.Join(agent.cfg.OutboundPath, filepath.Base(f.Filename))
+	fd, err := agent.client.Create(path)
 	if err != nil {
-		return fmt.Errorf("sftp: problem creating %s: %v", f.Filename, err)
+		return fmt.Errorf("sftp: problem creating %s: %v", path, err)
 	}
 	n, err := io.Copy(fd, f.Contents)
 	if n == 0 || err != nil {
-		return fmt.Errorf("sftp: problem copying (n=%d) %s: %v", n, f.Filename, err)
+		return fmt.Errorf("sftp: problem copying (n=%d) %s: %v", n, path, err)
 	}
 	if err := fd.Close(); err != nil {
-		return fmt.Errorf("sftp: problem closing %s: %v", f.Filename, err)
+		return fmt.Errorf("sftp: problem closing %s: %v", path, err)
 	}
 	if err := fd.Chmod(0600); err != nil {
-		return fmt.Errorf("sftp: problem chmod %s: %v", f.Filename, err)
+		return fmt.Errorf("sftp: problem chmod %s: %v", path, err)
 	}
 	return nil
 }

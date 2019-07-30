@@ -173,7 +173,11 @@ func (agent *FTPTransferAgent) UploadFile(f File) error {
 
 	// Write file contents into path
 	// Take the base of f.Filename and our (out of band) OutboundPath to avoid accepting a write like '../../../../etc/passwd'.
-	return agent.conn.Stor(filepath.Base(f.Filename), f.Contents)
+	filename := filepath.Base(f.Filename)
+	if err := agent.conn.Stor(filename, f.Contents); err != nil {
+		return fmt.Errorf("unable to upload %s: %v", filepath.Join(agent.cfg.OutboundPath, filename), err)
+	}
+	return nil
 }
 
 func (agent *FTPTransferAgent) GetInboundFiles() ([]File, error) {
