@@ -23,6 +23,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
+var xUserIdResponseWriter httpRespWriter = func(logger log.Logger, w http.ResponseWriter, r *http.Request) (http.ResponseWriter, error) {
+	return defaultResponseWriter("yes", logger, w, r)
+}
+
 func TestHttp__internalError(t *testing.T) {
 	w := httptest.NewRecorder()
 	internalError(log.NewNopLogger(), w, errors.New("test"))
@@ -55,7 +59,7 @@ func TestHTTP__idempotency(t *testing.T) {
 
 	router := mux.NewRouter()
 	router.Methods("GET").Path("/test").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(logger, w, r)
+		w, err := xUserIdResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}

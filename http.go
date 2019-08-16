@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -81,9 +82,26 @@ func addPingRoute(logger log.Logger, r *mux.Router) {
 	})
 }
 
-func wrapResponseWriter(logger log.Logger, w http.ResponseWriter, r *http.Request) (http.ResponseWriter, error) {
+type httpRespWriter func(logger log.Logger, w http.ResponseWriter, r *http.Request) (http.ResponseWriter, error)
+
+var wrapResponseWriter httpRespWriter = func(logger log.Logger, w http.ResponseWriter, r *http.Request) (http.ResponseWriter, error) {
+
+	// I think we need to keep x-user-id, so how can our documentation better mention that?
+	// Make sure all examples have it included.
+
+	return defaultResponseWriter(os.Getenv("HTTP_REQUIRE_USER_ID"), logger, w, r) // TODO(adam): so... what bugs will this create? tons I assume?
+}
+
+var defaultResponseWriter = func(requireUserIdHeader string, logger log.Logger, w http.ResponseWriter, r *http.Request) (http.ResponseWriter, error) {
 	route := fmt.Sprintf("%s-%s", strings.ToLower(r.Method), cleanMetricsPath(r.URL.Path))
-	return moovhttp.EnsureHeaders(logger, routeHistogram.With("route", route), inmemIdempotentRecorder, w, r)
+	hist := routeHistogram.With("route", route)
+
+	switch strings.ToLower(requireUserIdHeader) {
+	case "true", "yes":
+		return moovhttp.EnsureHeaders(logger, hist, inmemIdempotentRecorder, w, r)
+	default:
+		return moovhttp.Wrap(logger, hist, w, r), nil
+	}
 }
 
 var baseIdRegex = regexp.MustCompile(`([a-f0-9]{40})`)

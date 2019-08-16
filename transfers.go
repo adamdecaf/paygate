@@ -254,6 +254,8 @@ type transferRouter struct {
 
 	accountsClient        AccountsClient
 	accountsCallsDisabled bool
+
+	httpRespWriter httpRespWriter
 }
 
 func (c *transferRouter) registerRoutes(router *mux.Router) {
@@ -281,7 +283,7 @@ func getTransferID(r *http.Request) TransferID {
 
 func (c *transferRouter) getUserTransfers() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(c.logger, w, r)
+		w, err := c.httpRespWriter(c.logger, w, r)
 		if err != nil {
 			return
 		}
@@ -305,7 +307,7 @@ func (c *transferRouter) getUserTransfers() http.HandlerFunc {
 
 func (c *transferRouter) getUserTransfer() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(c.logger, w, r)
+		w, err := c.httpRespWriter(c.logger, w, r)
 		if err != nil {
 			return
 		}
@@ -356,7 +358,7 @@ func readTransferRequests(r *http.Request) ([]*transferRequest, error) {
 
 func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(c.logger, w, r)
+		w, err := c.httpRespWriter(c.logger, w, r)
 		if err != nil {
 			return
 		}
@@ -485,7 +487,7 @@ func createTransactionLines(orig *accounts.Account, rec *accounts.Account, amoun
 
 func (c *transferRouter) deleteUserTransfer() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(c.logger, w, r)
+		w, err := c.httpRespWriter(c.logger, w, r)
 		if err != nil {
 			return
 		}
@@ -528,7 +530,7 @@ func (c *transferRouter) deleteUserTransfer() http.HandlerFunc {
 // 400 - errors, check json
 func (c *transferRouter) validateUserTransfer() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(c.logger, w, r)
+		w, err := c.httpRespWriter(c.logger, w, r)
 		if err != nil {
 			return
 		}
@@ -556,7 +558,7 @@ func (c *transferRouter) validateUserTransfer() http.HandlerFunc {
 
 func (c *transferRouter) getUserTransferFiles() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(c.logger, w, r)
+		w, err := c.httpRespWriter(c.logger, w, r)
 		if err != nil {
 			return
 		}
@@ -588,7 +590,7 @@ func (c *transferRouter) getUserTransferFiles() http.HandlerFunc {
 
 func (c *transferRouter) getUserTransferEvents() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(c.logger, w, r)
+		w, err := c.httpRespWriter(c.logger, w, r)
 		if err != nil {
 			return
 		}

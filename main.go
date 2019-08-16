@@ -200,6 +200,8 @@ func main() {
 
 		accountsClient:        accountsClient,
 		accountsCallsDisabled: accountsCallsDisabled,
+
+		httpRespWriter: wrapResponseWriter,
 	}
 	xferRouter.registerRoutes(handler)
 

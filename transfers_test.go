@@ -66,6 +66,7 @@ func createTestTransferRouter(
 				return ach
 			},
 			accountsClient: accountsClient,
+			httpRespWriter: xUserIdResponseWriter,
 		},
 		ach:            ach,
 		achServer:      achServer,
@@ -454,6 +455,8 @@ func TestTransfers__read(t *testing.T) {
 func TestTransfers__idempotency(t *testing.T) {
 	// The repositories aren't used, aka idempotency check needs to be first.
 	xferRouter := createTestTransferRouter(nil, nil, nil, nil, nil)
+	xferRouter.httpRespWriter = xUserIdResponseWriter // override from constructor default
+
 	defer xferRouter.close()
 
 	router := mux.NewRouter()
