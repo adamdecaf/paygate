@@ -12,12 +12,12 @@ matrix:
       go: 1.12.x
       cache:
         directories:
-          - "/home/travis/.cache/go-build" # GOCACHE
+          - $GOPATH/pkg/mod
     - os: osx
       go: 1.12.x
       cache:
         directories:
-          - "/Users/travis/Library/Caches/go-build" # GOCACHE
+          - $GOPATH/pkg/mod
 before_install:
   # Setup directory for binaries
   - mkdir ./bin
