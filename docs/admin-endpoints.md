@@ -26,18 +26,31 @@ $ curl -s localhost:9092/live | jq .
 Note: Paygate currently supports `/ready`, but has no checks on this so `200 OK` is always returned.
 
 
-### Force ACH File Merging and Uploading
+### Flush Inbound ACH files
 
-Call this endpoint to start paygate's merging and uploading of ACH files outside of the interval. There's no response except for `200 OK` after the process completes.
+Call this endpoint to start paygate's download and processing of inbound and returned ACH files. The process will simply initiate the same branch of code that is execited on the interval (`ACH_FILE_TRANSFER_INTERVAL`). There's no response except for `200 OK` after the process completes.
 
 ```
-$ curl -XPOST localhost:9092/files/upload
+$ curl -XPUT localhost:9092/files/flush/incoming
 
 # paygate logs
-ts=2019-08-23T18:36:24.206694Z caller=file_transfer_async.go:218 startPeriodicFileOperations="forcing merge and upload of ACH files"
-ts=2019-08-23T18:36:24.206898Z caller=file_transfer_async.go:640 file-transfer-controller="Starting file merge and upload operations"
-ts=2019-08-23T18:36:24.207339Z caller=file_transfer_async.go:254 startPeriodicFileOperations="files sync'd, waiting 10m0s"
+TODO(adam): need logs after impl
 ```
+
+### Flush Outbound ACH files
+
+Call this endpoint to start paygate's download and processing of inbound and returned ACH files. The process will simply initiate the same branch of code that is execited on the interval (`ACH_FILE_TRANSFER_INTERVAL`). There's no response except for `200 OK` after the process completes.
+
+```
+$ curl -XPUT localhost:9092/files/flush/outgoing
+
+# paygate logs
+TODO(adam): need logs after impl
+```
+
+### Flush ACH files
+
+Call `PUT /files/flush` to initiate both inbound and outbound ACH file flushing. `200 OK` will be returned on success.
 
 ### Reading Micro-Deposit Amounts
 
