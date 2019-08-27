@@ -196,11 +196,15 @@ func (c *fileTransferController) findTransferType(routingNumber string) string {
 }
 
 // startPeriodicFileOperations will block forever to periodically download incoming and returned ACH files while also merging
-// and uploading ACH files to their remote SFTP server. forceUpload is a channel for manually triggering the "merge and upload"
-// portion of this pooling loop, which is used by admin endpoints and to make testing easier.
+// and uploading ACH files to their remote SFTP server.
+//
+// flushIncoming is a channel for manually initiating paygate's "download and processing" of inbound files and
+// flushOutgoing is a channel for manually initiating paygate's "merge and upload" of outbound micro-deposits and transfers.
+//
+// Typically startPeriodicFileOperations has a time.Ticker loop to periodically perform both steps.
 //
 // Uploads will be completed before their cutoff time which is set for a given ABA routing number.
-func (c *fileTransferController) startPeriodicFileOperations(ctx context.Context, forceUpload chan struct{}, depRepo depositoryRepository, transferRepo transferRepository) {
+func (c *fileTransferController) startPeriodicFileOperations(ctx context.Context, flushIncoming, flushOutgoing chan struct{}, depRepo depositoryRepository, transferRepo transferRepository) {
 	tick := time.NewTicker(c.interval)
 	defer tick.Stop()
 
@@ -208,50 +212,67 @@ func (c *fileTransferController) startPeriodicFileOperations(ctx context.Context
 	transferCursor := transferRepo.getTransferCursor(c.batchSize, depRepo)
 	microDepositCursor := depRepo.getMicroDepositCursor(c.batchSize)
 
+	inbound := func(wg *sync.WaitGroup) error {
+		wg.Add(1)
+		defer wg.Done()
+
+		return c.downloadAndProcessIncomingFiles(depRepo, transferRepo)
+	}
+	outbound := func(wg *sync.WaitGroup) error {
+		wg.Add(1)
+		defer wg.Done()
+
+		return c.mergeAndUploadFiles(transferCursor, microDepositCursor, transferRepo)
+	}
+
 	for {
 		// Setup our concurrnet waiting
 		var wg sync.WaitGroup
 		errs := make(chan error, 10)
 
 		select {
-		case <-forceUpload:
-			c.logger.Log("startPeriodicFileOperations", "forcing merge and upload of ACH files")
-			goto uploadFiles
+		case <-flushIncoming:
+			c.logger.Log("startPeriodicFileOperations", "flushing incoming and returned ACH files")
+			go func() {
+				if err := inbound(&wg); err != nil {
+					errs <- err
+				}
+			}()
+
+		case <-flushOutgoing:
+			c.logger.Log("startPeriodicFileOperations", "flushing outgoing ACH transfers and micro-deposits")
+			go func() {
+				if err := outbound(&wg); err != nil {
+					errs <- err
+				}
+			}()
 
 		case <-tick.C:
 			// This is triggered by the time.Ticker (which accounts for delays) so let's download and upload files.
 			c.logger.Log("startPeriodicFileOperations", "Starting periodic file operations")
-			wg.Add(1)
 			go func() {
-				if err := c.downloadAndProcessIncomingFiles(depRepo, transferRepo); err != nil {
-					errs <- fmt.Errorf("downloadAndProcessIncomingFiles: %v", err)
+				if err := inbound(&wg); err != nil {
+					errs <- err
 				}
-				wg.Done()
 			}()
-			goto uploadFiles
+			go func() {
+				if err := outbound(&wg); err != nil {
+					errs <- err
+				}
+			}()
 
 		case <-ctx.Done():
 			c.logger.Log("startPeriodicFileOperations", "Shutting down due to context.Done()")
 			return
 		}
 
-	uploadFiles:
-		// Grab transfers, merge them into files, and upload any which are complete.
-		wg.Add(1)
-		go func() {
-			if err := c.mergeAndUploadFiles(transferCursor, microDepositCursor, transferRepo); err != nil {
-				errs <- fmt.Errorf("mergeAndUploadFiles: %v", err)
-			}
-			wg.Done()
-		}()
-
-		// Wait for all operations to complete
+		// Wait for all above operations to complete
 		wg.Wait()
 		errs <- nil // send so channel read doesn't block
 		if err := <-errs; err != nil {
 			c.logger.Log("startPeriodicFileOperations", fmt.Sprintf("ERROR: periodic file operation"), "error", err)
 		} else {
-			c.logger.Log("startPeriodicFileOperations", fmt.Sprintf("files sync'd, waiting %v", c.interval))
+			c.logger.Log("startPeriodicFileOperations", "files sync'd")
 		}
 	}
 }
