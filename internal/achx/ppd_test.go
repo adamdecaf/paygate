@@ -2,11 +2,9 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package remoteach
+package achx
 
 import (
-	"encoding/json"
-	"strings"
 	"testing"
 
 	"github.com/moov-io/base"
@@ -15,23 +13,7 @@ import (
 	"github.com/moov-io/paygate/pkg/id"
 )
 
-func TestWEBPaymentType(t *testing.T) {
-	var paymentType model.WEBPaymentType
-	if err := json.Unmarshal([]byte(`"SINGLE"`), &paymentType); err != nil {
-		t.Fatal(err)
-	}
-	if err := json.Unmarshal([]byte(`"ReoCCuRRing"`), &paymentType); err != nil {
-		t.Fatal(err)
-	}
-	if err := json.Unmarshal([]byte(`"other"`), &paymentType); err == nil {
-		t.Fatal(err)
-	}
-	if err := json.Unmarshal([]byte("1"), &paymentType); err == nil {
-		t.Fatal("expected error")
-	}
-}
-
-func TestWEB__createWEBBatch(t *testing.T) {
+func TestPPD__createPPDBatch(t *testing.T) {
 	depID, userID := base.ID(), id.User(base.ID())
 	keeper := secrets.TestStringKeeper(t)
 
@@ -89,21 +71,17 @@ func TestWEB__createWEBBatch(t *testing.T) {
 		Receiver:               receiver.ID,
 		ReceiverDepository:     receiverDep.ID,
 		Description:            "sending money",
-		StandardEntryClassCode: "WEB",
+		StandardEntryClassCode: "PPD",
 		Status:                 model.TransferPending,
 		UserID:                 userID.String(),
-		WEBDetail: &model.WEBDetail{
-			PaymentInformation: "test payment",
-			PaymentType:        model.WEBSingle,
-		},
 	}
 
-	batch, err := createWEBBatch(depID, transfer, receiver, receiverDep, orig, origDep)
+	batch, err := createPPDBatch(depID, transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if batch == nil {
-		t.Error("nil WEB Batch")
+		t.Error("nil PPD Batch")
 	}
 
 	file, err := ConstructFile(depID, "", gateway, transfer, receiver, receiverDep, orig, origDep)
@@ -111,17 +89,6 @@ func TestWEB__createWEBBatch(t *testing.T) {
 		t.Fatal(err)
 	}
 	if file == nil {
-		t.Error("nil WEB ach.File")
-	}
-
-	// Make sure WEBReoccurring are rejected
-	transfer.WEBDetail.PaymentType = "reoccurring"
-	batch, err = createWEBBatch(depID, transfer, receiver, receiverDep, orig, origDep)
-	if batch != nil || err == nil {
-		t.Errorf("expected error, but got batch: %v", batch)
-	} else {
-		if !strings.Contains(err.Error(), "createWEBBatch: reoccurring WEB transfers are not supported") {
-			t.Fatalf("unexpected error: %v", err)
-		}
+		t.Error("nil PPD ach.File")
 	}
 }
