@@ -186,7 +186,7 @@ func main() {
 	route.AddPingRoute(cfg.Logger, handler)
 
 	// Depository HTTP routes
-	depositoryRouter := depository.NewRouter(cfg.Logger, fedClient, depositoryRepo, eventRepo, stringKeeper, removalChan)
+	depositoryRouter := depository.NewRouter(cfg.Logger, fedClient, depositoryRepo, eventRepo, stringKeeper)
 	depositoryRouter.RegisterRoutes(handler)
 
 	// Gateway HTTP Routes
