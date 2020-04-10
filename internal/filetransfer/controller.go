@@ -23,6 +23,9 @@ import (
 	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
 	"github.com/moov-io/paygate/internal/filetransfer/admin"
 	controllercfg "github.com/moov-io/paygate/internal/filetransfer/config"
+	"github.com/moov-io/paygate/internal/gateways"
+	"github.com/moov-io/paygate/internal/originators"
+	"github.com/moov-io/paygate/internal/receivers"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/internal/util"
@@ -44,10 +47,15 @@ type Controller struct {
 	// interval is how often to pull records from the database and operate on
 	interval time.Duration
 
-	repo             controllercfg.Repository
-	depRepo          depository.Repository
-	microDepositRepo microdeposit.Repository
-	transferRepo     transfers.Repository
+	repo               controllercfg.Repository
+	depRepo            depository.Repository
+	gatewayRepo        gateways.Repository
+	microDepositRepo   microdeposit.Repository
+	origRepo           originators.Repository
+	receiverRepository receivers.Repository
+	transferRepo       transfers.Repository
+
+	odfiAccount *microdeposit.ODFIAccount
 
 	accountsClient accounts.Client
 
@@ -67,8 +75,12 @@ func NewController(
 	dir string,
 	repo controllercfg.Repository,
 	depRepo depository.Repository,
+	gatewayRepo gateways.Repository,
 	microDepositRepo microdeposit.Repository,
+	originatorRepo originators.Repository,
+	receiverRepository receivers.Repository,
 	transferRepo transfers.Repository,
+	odfiAccount *microdeposit.ODFIAccount,
 	accountsClient accounts.Client,
 ) (*Controller, error) {
 	if _, err := os.Stat(dir); dir == "" || err != nil {
@@ -109,8 +121,12 @@ func NewController(
 		batchSize:                  batchSize,
 		repo:                       repo,
 		depRepo:                    depRepo,
+		gatewayRepo:                gatewayRepo,
 		microDepositRepo:           microDepositRepo,
+		origRepo:                   originatorRepo,
+		receiverRepository:         receiverRepository,
 		transferRepo:               transferRepo,
+		odfiAccount:                odfiAccount,
 		logger:                     cfg.Logger,
 		accountsClient:             accountsClient,
 		updateDepositoriesFromNOCs: util.Yes(os.Getenv("UPDATE_DEPOSITORIES_FROM_CHANGE_CODE")),
