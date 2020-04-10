@@ -17,52 +17,6 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-func TestTransfers__UpdateTransferStatus(t *testing.T) {
-	t.Parallel()
-
-	check := func(t *testing.T, repo Repository) {
-		amt, _ := model.NewAmount("USD", "32.92")
-		userID := id.User(base.ID())
-		req := &transferRequest{
-			Type:                   model.PushTransfer,
-			Amount:                 *amt,
-			Originator:             model.OriginatorID("originator"),
-			OriginatorDepository:   id.Depository("originator"),
-			Receiver:               model.ReceiverID("receiver"),
-			ReceiverDepository:     id.Depository("receiver"),
-			Description:            "money",
-			StandardEntryClassCode: "PPD",
-			fileID:                 "test-file",
-		}
-		transfers, err := repo.createUserTransfers(userID, []*transferRequest{req})
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if err := repo.UpdateTransferStatus(transfers[0].ID, model.TransferFailed); err != nil {
-			t.Fatal(err)
-		}
-
-		xfer, err := repo.getUserTransfer(transfers[0].ID, userID)
-		if err != nil {
-			t.Error(err)
-		}
-		if xfer.Status != model.TransferFailed {
-			t.Errorf("got status %s", xfer.Status)
-		}
-	}
-
-	// SQLite tests
-	sqliteDB := database.CreateTestSqliteDB(t)
-	defer sqliteDB.Close()
-	check(t, &SQLRepo{sqliteDB.DB, log.NewNopLogger()})
-
-	// MySQL tests
-	mysqlDB := database.CreateTestMySQLDB(t)
-	defer mysqlDB.Close()
-	check(t, &SQLRepo{mysqlDB.DB, log.NewNopLogger()})
-}
-
 func TestTransfers__transactionID(t *testing.T) {
 	t.Parallel()
 
@@ -72,7 +26,7 @@ func TestTransfers__transactionID(t *testing.T) {
 		amt, _ := model.NewAmount("USD", "51.21")
 
 		repo := &SQLRepo{db, log.NewNopLogger()}
-		requests := []*transferRequest{
+		requests := []*CreateRequest{
 			{
 				Type:                   model.PullTransfer,
 				Amount:                 *amt,
@@ -85,7 +39,7 @@ func TestTransfers__transactionID(t *testing.T) {
 				transactionID:          transactionID,
 			},
 		}
-		if _, err := repo.createUserTransfers(userID, requests); err != nil {
+		if _, err := repo.CreateUserTransfers(userID, requests); err != nil {
 			t.Fatal(err)
 		}
 
@@ -129,7 +83,7 @@ func TestTransfers__LookupTransferFromReturn(t *testing.T) {
 	check := func(t *testing.T, repo Repository) {
 		amt, _ := model.NewAmount("USD", "32.92")
 		userID := id.User(base.ID())
-		req := &transferRequest{
+		req := &CreateRequest{
 			Type:                   model.PushTransfer,
 			Amount:                 *amt,
 			Originator:             model.OriginatorID("originator"),
@@ -140,7 +94,7 @@ func TestTransfers__LookupTransferFromReturn(t *testing.T) {
 			StandardEntryClassCode: "PPD",
 			fileID:                 "test-file",
 		}
-		transfers, err := repo.createUserTransfers(userID, []*transferRequest{req})
+		transfers, err := repo.CreateUserTransfers(userID, []*CreateRequest{req})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -183,7 +137,7 @@ func TestTransfers__SetReturnCode(t *testing.T) {
 		amt, _ := model.NewAmount("USD", "51.21")
 
 		repo := &SQLRepo{db, log.NewNopLogger()}
-		requests := []*transferRequest{
+		requests := []*CreateRequest{
 			{
 				Type:                   model.PullTransfer,
 				Amount:                 *amt,
@@ -195,7 +149,7 @@ func TestTransfers__SetReturnCode(t *testing.T) {
 				StandardEntryClassCode: "PPD",
 			},
 		}
-		if _, err := repo.createUserTransfers(userID, requests); err != nil {
+		if _, err := repo.CreateUserTransfers(userID, requests); err != nil {
 			t.Fatal(err)
 		}
 
@@ -242,7 +196,7 @@ func TestTransfers__MarkTransfersAsProcessed(t *testing.T) {
 	check := func(t *testing.T, repo *SQLRepo) {
 		amt, _ := model.NewAmount("USD", "32.92")
 		userID := id.User(base.ID())
-		req := &transferRequest{
+		req := &CreateRequest{
 			Type:                   model.PushTransfer,
 			Amount:                 *amt,
 			Originator:             model.OriginatorID("originator"),
@@ -253,7 +207,7 @@ func TestTransfers__MarkTransfersAsProcessed(t *testing.T) {
 			StandardEntryClassCode: "PPD",
 			fileID:                 "test-file",
 		}
-		transfers, err := repo.createUserTransfers(userID, []*transferRequest{req})
+		transfers, err := repo.CreateUserTransfers(userID, []*CreateRequest{req})
 		if err != nil {
 			t.Fatal(err)
 		}

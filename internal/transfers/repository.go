@@ -10,8 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/moov-io/ach"
-	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/model"
@@ -44,7 +42,7 @@ type Repository interface {
 	// uploaded to the ODFI. This needs to be done in one blocking operation to the caller.
 	MarkTransfersAsProcessed(filename string, traceNumbers []string) (int64, error)
 
-	createUserTransfers(userID id.User, requests []*transferRequest) ([]*model.Transfer, error)
+	CreateUserTransfers(userID id.User, requests []*CreateRequest) ([]*model.Transfer, error)
 	deleteUserTransfer(id id.Transfer, userID id.User) error
 }
 
@@ -59,118 +57,6 @@ type SQLRepo struct {
 
 func (r *SQLRepo) Close() error {
 	return r.db.Close()
-}
-
-func (r *SQLRepo) getUserTransfers(userID id.User, params transferFilterParams) ([]*model.Transfer, error) {
-	var statusQuery string
-	if string(params.Status) != "" {
-		statusQuery = "and status = ?"
-	}
-	query := fmt.Sprintf(`select transfer_id from transfers
-where user_id = ? and created_at >= ? and created_at <= ? and deleted_at is null %s
-order by created_at desc limit ? offset ?;`, statusQuery)
-	stmt, err := r.db.Prepare(query)
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-
-	args := []interface{}{userID, params.StartDate, params.EndDate, params.Limit, params.Offset}
-	if statusQuery != "" {
-		args = append(args, params.Status)
-	}
-	rows, err := stmt.Query(args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var transferIDs []string
-	for rows.Next() {
-		var row string
-		if err := rows.Scan(&row); err != nil {
-			return nil, fmt.Errorf("getUserTransfers scan: %v", err)
-		}
-		if row != "" {
-			transferIDs = append(transferIDs, row)
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("getUserTransfers: rows.Err=%v", err)
-	}
-
-	var transfers []*model.Transfer
-	for i := range transferIDs {
-		t, err := r.getUserTransfer(id.Transfer(transferIDs[i]), userID)
-		if err == nil && t.ID != "" {
-			transfers = append(transfers, t)
-		}
-	}
-	return transfers, rows.Err()
-}
-
-func (r *SQLRepo) GetTransfer(xferID id.Transfer) (*model.Transfer, error) {
-	query := `select transfer_id, user_id from transfers where transfer_id = ? and deleted_at is null limit 1`
-	stmt, err := r.db.Prepare(query)
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-
-	transferID, userID := "", ""
-	if err := stmt.QueryRow(xferID).Scan(&transferID, &userID); err != nil {
-		return nil, err
-	}
-	return r.getUserTransfer(id.Transfer(transferID), id.User(userID))
-}
-
-func (r *SQLRepo) getUserTransfer(id id.Transfer, userID id.User) (*model.Transfer, error) {
-	query := `select transfer_id, user_id, type, amount, originator_id, originator_depository, receiver, receiver_depository, description, standard_entry_class_code, status, same_day, return_code, created_at
-from transfers
-where transfer_id = ? and user_id = ? and deleted_at is null
-limit 1`
-	stmt, err := r.db.Prepare(query)
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-
-	row := stmt.QueryRow(id, userID)
-
-	transfer := &model.Transfer{}
-	var (
-		amt        string
-		returnCode *string
-		created    time.Time
-	)
-	err = row.Scan(&transfer.ID, &transfer.UserID, &transfer.Type, &amt, &transfer.Originator, &transfer.OriginatorDepository, &transfer.Receiver, &transfer.ReceiverDepository, &transfer.Description, &transfer.StandardEntryClassCode, &transfer.Status, &transfer.SameDay, &returnCode, &created)
-	if err != nil {
-		return nil, err
-	}
-	if returnCode != nil {
-		transfer.ReturnCode = ach.LookupReturnCode(*returnCode)
-	}
-	transfer.Created = base.NewTime(created)
-	// parse Amount struct
-	if err := transfer.Amount.FromString(amt); err != nil {
-		return nil, err
-	}
-	if transfer.ID == "" {
-		return nil, nil // not found
-	}
-	return transfer, nil
-}
-
-func (r *SQLRepo) UpdateTransferStatus(id id.Transfer, status model.TransferStatus) error {
-	query := `update transfers set status = ? where transfer_id = ? and deleted_at is null`
-	stmt, err := r.db.Prepare(query)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	_, err = stmt.Exec(status, id)
-	return err
 }
 
 func (r *SQLRepo) GetFileIDForTransfer(id id.Transfer, userID id.User) (string, error) {
@@ -249,60 +135,6 @@ func (r *SQLRepo) SetReturnCode(id id.Transfer, returnCode string) error {
 	defer stmt.Close()
 
 	_, err = stmt.Exec(returnCode, id)
-	return err
-}
-
-func (r *SQLRepo) createUserTransfers(userID id.User, requests []*transferRequest) ([]*model.Transfer, error) {
-	query := `insert into transfers (transfer_id, user_id, type, amount, originator_id, originator_depository, receiver, receiver_depository, description, standard_entry_class_code, status, same_day, file_id, transaction_id, remote_address, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	stmt, err := r.db.Prepare(query)
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-
-	var transfers []*model.Transfer
-
-	now := time.Now()
-	var status model.TransferStatus = model.TransferPending
-	for i := range requests {
-		req, transferId := requests[i], base.ID()
-		xfer := &model.Transfer{
-			ID:                     id.Transfer(transferId),
-			Type:                   req.Type,
-			Amount:                 req.Amount,
-			Originator:             req.Originator,
-			OriginatorDepository:   req.OriginatorDepository,
-			Receiver:               req.Receiver,
-			ReceiverDepository:     req.ReceiverDepository,
-			Description:            req.Description,
-			StandardEntryClassCode: req.StandardEntryClassCode,
-			Status:                 status,
-			SameDay:                req.SameDay,
-			Created:                base.NewTime(now),
-		}
-		if err := xfer.Validate(); err != nil {
-			return nil, fmt.Errorf("validation failed for transfer Originator=%s, Receiver=%s, Description=%s %v", xfer.Originator, xfer.Receiver, xfer.Description, err)
-		}
-
-		// write transfer
-		_, err := stmt.Exec(transferId, userID, req.Type, req.Amount.String(), req.Originator, req.OriginatorDepository, req.Receiver, req.ReceiverDepository, req.Description, req.StandardEntryClassCode, status, req.SameDay, req.fileID, req.transactionID, req.remoteAddr, now)
-		if err != nil {
-			return nil, err
-		}
-		transfers = append(transfers, xfer)
-	}
-	return transfers, nil
-}
-
-func (r *SQLRepo) deleteUserTransfer(id id.Transfer, userID id.User) error {
-	query := `update transfers set deleted_at = ? where transfer_id = ? and user_id = ? and deleted_at is null`
-	stmt, err := r.db.Prepare(query)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	_, err = stmt.Exec(time.Now(), id, userID)
 	return err
 }
 

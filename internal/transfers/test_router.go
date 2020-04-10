@@ -18,6 +18,7 @@ import (
 	"github.com/moov-io/paygate/internal/originators"
 	"github.com/moov-io/paygate/internal/receivers"
 	"github.com/moov-io/paygate/internal/secrets"
+	"github.com/moov-io/paygate/internal/transfers/limiter"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
@@ -53,8 +54,8 @@ func setupTestRouter(t *testing.T, xferRepo Repository) *TestRouter {
 	if rr, ok := xferRepo.(*SQLRepo); ok {
 		db = rr.db
 	}
-	limits, _ := ParseLimits(OneDayLimit(), SevenDayLimit(), ThirtyDayLimit())
-	limiter := NewLimitChecker(log.NewNopLogger(), db, limits)
+	limits, _ := limiter.Parse(limiter.OneDay(), limiter.SevenDay(), limiter.ThirtyDay())
+	limiter := limiter.New(log.NewNopLogger(), db, limits)
 
 	accountsClient := &accounts.MockClient{}
 

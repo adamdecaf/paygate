@@ -22,6 +22,40 @@ import (
 	"github.com/moov-io/paygate/pkg/id"
 )
 
+func TestTransfers__HTTPValidateNoUserID(t *testing.T) {
+	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil, nil)
+
+	router := mux.NewRouter()
+
+	xfer.RegisterRoutes(router)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/transfers/foo/failed", nil)
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("got %d", w.Code)
+	}
+}
+
+func TestTransfers__HTTPFilesNoUserID(t *testing.T) {
+	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil, nil)
+
+	router := mux.NewRouter()
+
+	xfer.RegisterRoutes(router)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/transfers/foo/files", nil)
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("got %d", w.Code)
+	}
+}
+
 func TestTransfers__validateUserTransfer(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
@@ -30,7 +64,7 @@ func TestTransfers__validateUserTransfer(t *testing.T) {
 
 	amt, _ := model.NewAmount("USD", "32.41")
 	userID := id.User(base.ID())
-	req := &transferRequest{
+	req := &CreateRequest{
 		Type:                   model.PushTransfer,
 		Amount:                 *amt,
 		Originator:             model.OriginatorID("originator"),
@@ -41,7 +75,7 @@ func TestTransfers__validateUserTransfer(t *testing.T) {
 		StandardEntryClassCode: "PPD",
 		fileID:                 "test-file",
 	}
-	transfers, err := xferRepo.createUserTransfers(userID, []*transferRequest{req})
+	transfers, err := xferRepo.CreateUserTransfers(userID, []*CreateRequest{req})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,7 +136,7 @@ func TestTransfers__getUserTransferFiles(t *testing.T) {
 
 	amt, _ := model.NewAmount("USD", "32.41")
 	userID := id.User(base.ID())
-	req := &transferRequest{
+	req := &CreateRequest{
 		Type:                   model.PushTransfer,
 		Amount:                 *amt,
 		Originator:             model.OriginatorID("originator"),
@@ -113,7 +147,7 @@ func TestTransfers__getUserTransferFiles(t *testing.T) {
 		StandardEntryClassCode: "PPD",
 		fileID:                 "test-file",
 	}
-	transfers, err := repo.createUserTransfers(userID, []*transferRequest{req})
+	transfers, err := repo.CreateUserTransfers(userID, []*CreateRequest{req})
 	if err != nil {
 		t.Fatal(err)
 	}

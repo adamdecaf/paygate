@@ -90,7 +90,7 @@ func (r *MockRepository) MarkTransferAsMerged(id id.Transfer, filename string, t
 	return r.Err
 }
 
-func (r *MockRepository) createUserTransfers(userID id.User, requests []*transferRequest) ([]*model.Transfer, error) {
+func (r *MockRepository) CreateUserTransfers(userID id.User, requests []*CreateRequest) ([]*model.Transfer, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}

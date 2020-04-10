@@ -2,21 +2,21 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package transfers
+package xferadmin
 
 import (
 	"encoding/json"
 	"fmt"
 	"net/http"
 
+	"github.com/go-kit/kit/log"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/route"
-
-	"github.com/go-kit/kit/log"
+	"github.com/moov-io/paygate/internal/transfers"
 )
 
-func updateTransferStatus(logger log.Logger, repo Repository) http.HandlerFunc {
+func updateTransferStatus(logger log.Logger, repo transfers.Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w = route.Wrap(logger, w, r)
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -34,7 +34,7 @@ func updateTransferStatus(logger log.Logger, repo Repository) http.HandlerFunc {
 			return
 		}
 
-		transferID := getTransferID(r)
+		transferID := transfers.GetID(r)
 		existing, err := repo.GetTransfer(transferID)
 		if err != nil {
 			moovhttp.Problem(w, fmt.Errorf("initial read: %v", err))

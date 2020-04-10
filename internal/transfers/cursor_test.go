@@ -54,7 +54,7 @@ func TestTransfers_transferCursor(t *testing.T) {
 	// the cursor will get stuck in an infinite loop. So we're inserting them at different times.
 	//
 	// TODO(adam): Will this become an issue?
-	requests := []*transferRequest{
+	requests := []*CreateRequest{
 		{
 			Type:                   model.PushTransfer,
 			Amount:                 amt("12.12"),
@@ -67,10 +67,10 @@ func TestTransfers_transferCursor(t *testing.T) {
 			fileID:                 "test-file1",
 		},
 	}
-	if _, err := transferRepo.createUserTransfers(userID, requests); err != nil {
+	if _, err := transferRepo.CreateUserTransfers(userID, requests); err != nil {
 		t.Fatal(err)
 	}
-	requests = []*transferRequest{
+	requests = []*CreateRequest{
 		{
 			Type:                   model.PullTransfer,
 			Amount:                 amt("13.13"),
@@ -83,10 +83,10 @@ func TestTransfers_transferCursor(t *testing.T) {
 			fileID:                 "test-file2",
 		},
 	}
-	if _, err := transferRepo.createUserTransfers(userID, requests); err != nil {
+	if _, err := transferRepo.CreateUserTransfers(userID, requests); err != nil {
 		t.Fatal(err)
 	}
-	requests = []*transferRequest{
+	requests = []*CreateRequest{
 		{
 			Type:                   model.PushTransfer,
 			Amount:                 amt("14.14"),
@@ -99,7 +99,7 @@ func TestTransfers_transferCursor(t *testing.T) {
 			fileID:                 "test-file3",
 		},
 	}
-	if _, err := transferRepo.createUserTransfers(userID, requests); err != nil {
+	if _, err := transferRepo.CreateUserTransfers(userID, requests); err != nil {
 		t.Fatal(err)
 	}
 
@@ -160,7 +160,7 @@ func TestTransfers_MarkTransferAsMerged(t *testing.T) {
 	// the cursor will get stuck in an infinite loop. So we're inserting them at different times.
 	//
 	// TODO(adam): Will this become an issue?
-	requests := []*transferRequest{
+	requests := []*CreateRequest{
 		{
 			Type:                   model.PushTransfer,
 			Amount:                 amt("12.12"),
@@ -173,7 +173,7 @@ func TestTransfers_MarkTransferAsMerged(t *testing.T) {
 			fileID:                 "test-file1",
 		},
 	}
-	if _, err := transferRepo.createUserTransfers(userID, requests); err != nil {
+	if _, err := transferRepo.CreateUserTransfers(userID, requests); err != nil {
 		t.Fatal(err)
 	}
 
@@ -197,7 +197,7 @@ func TestTransfers_MarkTransferAsMerged(t *testing.T) {
 
 	// re-create our transferCursor and see the transfer ignored
 	// plus add a second transfer and ensure we get that
-	requests = []*transferRequest{
+	requests = []*CreateRequest{
 		{
 			Type:                   model.PullTransfer,
 			Amount:                 amt("13.13"),
@@ -210,7 +210,7 @@ func TestTransfers_MarkTransferAsMerged(t *testing.T) {
 			fileID:                 "test-file2",
 		},
 	}
-	if _, err := transferRepo.createUserTransfers(userID, requests); err != nil {
+	if _, err := transferRepo.CreateUserTransfers(userID, requests); err != nil {
 		t.Fatal(err)
 	}
 	cur = transferRepo.GetCursor(2, depRepo) // batch size

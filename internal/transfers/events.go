@@ -22,7 +22,7 @@ func (c *TransferRouter) getUserTransferEvents() http.HandlerFunc {
 			return
 		}
 
-		transferID := getTransferID(r)
+		transferID := GetID(r)
 		transfer, err := c.transferRepo.getUserTransfer(transferID, responder.XUserID)
 		if transfer == nil || err != nil {
 			responder.Problem(err)
@@ -46,7 +46,7 @@ func (c *TransferRouter) getUserTransferEvents() http.HandlerFunc {
 	}
 }
 
-func writeTransferEvent(userID id.User, req *transferRequest, eventRepo events.Repository) error {
+func writeTransferEvent(userID id.User, req *CreateRequest, eventRepo events.Repository) error {
 	return eventRepo.WriteEvent(userID, &events.Event{
 		ID:      events.EventID(base.ID()),
 		Topic:   fmt.Sprintf("%s transfer to %s", req.Type, req.Description),

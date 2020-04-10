@@ -41,6 +41,8 @@ import (
 	"github.com/moov-io/paygate/internal/route"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/transfers"
+	"github.com/moov-io/paygate/internal/transfers/limiter"
+	"github.com/moov-io/paygate/internal/transfers/xferadmin"
 	"github.com/moov-io/paygate/internal/util"
 
 	"github.com/go-kit/kit/log"
@@ -198,18 +200,18 @@ func main() {
 	microDepositRouter.RegisterRoutes(handler)
 
 	// Transfer HTTP routes
-	limits, err := transfers.ParseLimits(transfers.OneDayLimit(), transfers.SevenDayLimit(), transfers.ThirtyDayLimit())
+	limits, err := limiter.Parse(limiter.OneDay(), limiter.SevenDay(), limiter.ThirtyDay())
 	if err != nil {
 		panic(fmt.Sprintf("ERROR parsing transfer limits: %v", err))
 	}
-	transferLimitChecker := transfers.NewLimitChecker(cfg.Logger, db, limits)
+	transferLimitChecker := limiter.New(cfg.Logger, db, limits)
 	xferRouter := transfers.NewTransferRouter(cfg.Logger,
 		depositoryRepo, eventRepo, gatewayRepo, receiverRepo, originatorsRepo, transferRepo,
-		transferLimitChecker, removalChan,
+		transferLimitChecker,
 		accountsClient, customersClient,
 	)
 	xferRouter.RegisterRoutes(handler)
-	transfers.RegisterAdminRoutes(cfg.Logger, adminServer, transferRepo)
+	xferadmin.RegisterRoutes(cfg.Logger, adminServer, transferRepo)
 
 	// Check to see if our -http.addr flag has been overridden
 	if v := os.Getenv("HTTP_BIND_ADDRESS"); v != "" {

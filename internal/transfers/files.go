@@ -23,7 +23,7 @@ func (c *TransferRouter) validateUserTransfer() http.HandlerFunc {
 			return
 		}
 
-		file, err := c.makeFileFromTransfer(responder.XUserID, getTransferID(r))
+		file, err := c.makeFileFromTransfer(responder.XUserID, GetID(r))
 		if err != nil {
 			moovhttp.Problem(w, err)
 			return
@@ -44,7 +44,7 @@ func (c *TransferRouter) getUserTransferFiles() http.HandlerFunc {
 			return
 		}
 
-		file, err := c.makeFileFromTransfer(responder.XUserID, getTransferID(r))
+		file, err := c.makeFileFromTransfer(responder.XUserID, GetID(r))
 		if err != nil {
 			moovhttp.Problem(w, err)
 			return

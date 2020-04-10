@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package transfers
+package xferadmin
 
 import (
 	"fmt"
@@ -11,13 +11,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-kit/kit/log"
 	"github.com/moov-io/base"
 	"github.com/moov-io/base/admin"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/model"
+	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/id"
-
-	"github.com/go-kit/kit/log"
 )
 
 type approvalTest struct {
@@ -25,7 +25,7 @@ type approvalTest struct {
 	db  *database.TestSQLiteDB
 
 	userID id.User
-	repo   Repository
+	repo   transfers.Repository
 }
 
 func (at *approvalTest) close() {
@@ -40,9 +40,9 @@ func setupApprovalTest(t *testing.T) *approvalTest {
 	sqliteDB := database.CreateTestSqliteDB(t)
 
 	userID := id.User(base.ID())
-	repo := NewTransferRepo(log.NewNopLogger(), sqliteDB.DB)
+	repo := transfers.NewTransferRepo(log.NewNopLogger(), sqliteDB.DB)
 
-	RegisterAdminRoutes(log.NewNopLogger(), svc, repo)
+	RegisterRoutes(log.NewNopLogger(), svc, repo)
 
 	return &approvalTest{
 		svc:    svc,
@@ -70,7 +70,7 @@ func TestApproval__Reviewable(t *testing.T) {
 
 	// write the transfer
 	amt, _ := model.NewAmount("USD", "14.22")
-	xfers, err := test.repo.createUserTransfers(test.userID, []*transferRequest{
+	xfers, err := test.repo.CreateUserTransfers(test.userID, []*transfers.CreateRequest{
 		{
 			Type:                   model.PushTransfer,
 			Amount:                 *amt,
@@ -80,7 +80,7 @@ func TestApproval__Reviewable(t *testing.T) {
 			ReceiverDepository:     id.Depository(base.ID()),
 			Description:            "example",
 			StandardEntryClassCode: "PPD",
-			userID:                 test.userID,
+			UserID:                 test.userID,
 		},
 	})
 	if err != nil {
@@ -140,7 +140,7 @@ func TestApproval__Pending(t *testing.T) {
 
 	// write the transfer
 	amt, _ := model.NewAmount("USD", "14.22")
-	xfers, err := test.repo.createUserTransfers(test.userID, []*transferRequest{
+	xfers, err := test.repo.CreateUserTransfers(test.userID, []*transfers.CreateRequest{
 		{
 			Type:                   model.PushTransfer,
 			Amount:                 *amt,
@@ -150,7 +150,7 @@ func TestApproval__Pending(t *testing.T) {
 			ReceiverDepository:     id.Depository(base.ID()),
 			Description:            "example",
 			StandardEntryClassCode: "PPD",
-			userID:                 test.userID,
+			UserID:                 test.userID,
 		},
 	})
 	if err != nil {
