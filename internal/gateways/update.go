@@ -6,36 +6,74 @@ package gateways
 
 import (
 	"database/sql"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
+	"github.com/go-kit/kit/log"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/model"
+	"github.com/moov-io/paygate/internal/route"
 	"github.com/moov-io/paygate/pkg/id"
-
-	"github.com/go-kit/kit/log"
 )
 
-type Repository interface {
-	GetUserGateway(userID id.User) (*model.Gateway, error)
-	createUserGateway(userID id.User, req gatewayRequest) (*model.Gateway, error)
+type gatewayRequest struct {
+	Origin          string `json:"origin"`
+	OriginName      string `json:"originName"`
+	Destination     string `json:"destination"`
+	DestinationName string `json:"destinationName"`
 }
 
-func NewRepo(logger log.Logger, db *sql.DB) *SQLGatewayRepo {
-	return &SQLGatewayRepo{log: logger, db: db}
+func (r gatewayRequest) missingFields() error {
+	if r.Origin == "" {
+		return errors.New("missing gatewayRequest.Origin")
+	}
+	if r.OriginName == "" {
+		return errors.New("missing gatewayRequest.OriginName")
+	}
+	if r.Destination == "" {
+		return errors.New("missing gatewayRequest.Destination")
+	}
+	if r.DestinationName == "" {
+		return errors.New("missing gatewayRequest.DestinationName")
+	}
+	return nil
 }
 
-type SQLGatewayRepo struct {
-	db  *sql.DB
-	log log.Logger
+func updateUserGateway(logger log.Logger, gatewayRepo Repository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		responder := route.NewResponder(logger, w, r)
+		if responder == nil {
+			return
+		}
+
+		var wrapper gatewayRequest
+		if err := json.NewDecoder(route.Read(r.Body)).Decode(&wrapper); err != nil {
+			responder.Problem(err)
+			return
+		}
+		if err := wrapper.missingFields(); err != nil {
+			responder.Problem(fmt.Errorf("%v: %v", route.ErrMissingRequiredJson, err))
+			return
+		}
+
+		gateway, err := gatewayRepo.updateUserGateway(responder.XUserID, wrapper)
+		if err != nil {
+			responder.Problem(err)
+			return
+		}
+
+		responder.Respond(func(w http.ResponseWriter) {
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(gateway)
+		})
+	}
 }
 
-func (r *SQLGatewayRepo) Close() error {
-	return r.db.Close()
-}
-
-func (r *SQLGatewayRepo) createUserGateway(userID id.User, req gatewayRequest) (*model.Gateway, error) {
+func (r *SQLGatewayRepo) updateUserGateway(userID id.User, req gatewayRequest) (*model.Gateway, error) {
 	gateway := &model.Gateway{
 		Origin:          req.Origin,
 		OriginName:      req.OriginName,
@@ -101,30 +139,6 @@ func (r *SQLGatewayRepo) createUserGateway(userID id.User, req gatewayRequest) (
 	}
 	if err := tx.Commit(); err != nil {
 		return nil, err
-	}
-	return gateway, nil
-}
-
-func (r *SQLGatewayRepo) GetUserGateway(userID id.User) (*model.Gateway, error) {
-	query := `select gateway_id, origin, origin_name, destination, destination_name, created_at
-from gateways where user_id = ? and deleted_at is null limit 1`
-	stmt, err := r.db.Prepare(query)
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-
-	row := stmt.QueryRow(userID)
-
-	gateway := &model.Gateway{}
-	var created time.Time
-	err = row.Scan(&gateway.ID, &gateway.Origin, &gateway.OriginName, &gateway.Destination, &gateway.DestinationName, &created)
-	if err != nil {
-		return nil, err
-	}
-	gateway.Created = base.NewTime(created)
-	if gateway.ID == "" {
-		return nil, nil // not found
 	}
 	return gateway, nil
 }

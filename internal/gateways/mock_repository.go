@@ -21,7 +21,7 @@ func (r *MockRepository) GetUserGateway(userID id.User) (*model.Gateway, error) 
 	return r.Gateway, nil
 }
 
-func (r *MockRepository) createUserGateway(userID id.User, req gatewayRequest) (*model.Gateway, error) {
+func (r *MockRepository) updateUserGateway(userID id.User, req gatewayRequest) (*model.Gateway, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
