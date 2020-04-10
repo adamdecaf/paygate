@@ -2,15 +2,16 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package depository
+package depadmin
 
 import (
 	"github.com/moov-io/base/admin"
+	"github.com/moov-io/paygate/internal/depository"
 
 	"github.com/go-kit/kit/log"
 )
 
 // RegisterAdminRoutes will add HTTP handlers for paygate's admin HTTP server
-func RegisterAdminRoutes(logger log.Logger, svc *admin.Server, depRepo Repository) {
-	svc.AddHandler("/depositories/{depositoryId}", overrideDepositoryStatus(logger, depRepo))
+func RegisterAdminRoutes(logger log.Logger, svc *admin.Server, repo depository.Repository) {
+	svc.AddHandler("/depositories/{depositoryId}", overrideDepositoryStatus(logger, repo))
 }

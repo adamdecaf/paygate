@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package depository
+package depadmin
 
 import (
 	"context"
@@ -15,10 +15,11 @@ import (
 	"time"
 
 	"github.com/moov-io/base"
-	moovadmin "github.com/moov-io/base/admin"
 	"github.com/moov-io/paygate/admin"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/model"
+	"github.com/moov-io/paygate/internal/route/admintest"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/id"
 
@@ -26,9 +27,7 @@ import (
 )
 
 func TestDepository__overrideDepositoryStatus(t *testing.T) {
-	svc := moovadmin.NewServer(":0")
-	go svc.Listen()
-	defer svc.Shutdown()
+	svc := admintest.Server(t)
 
 	depID, userID := base.ID(), id.User(base.ID())
 
@@ -36,8 +35,7 @@ func TestDepository__overrideDepositoryStatus(t *testing.T) {
 	defer sqliteDB.Close()
 
 	keeper := secrets.TestStringKeeper(t)
-
-	repo := NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper)
+	repo := depository.NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper)
 
 	if err := repo.UpsertUserDepository(userID, &model.Depository{
 		ID:            id.Depository(depID),
@@ -80,14 +78,11 @@ func TestDepository__overrideDepositoryStatus(t *testing.T) {
 }
 
 func TestDepository__overrideDepositoryStatusErr(t *testing.T) {
-	svc := moovadmin.NewServer(":0")
-	go svc.Listen()
-	defer svc.Shutdown()
+	svc := admintest.Server(t)
 
-	repo := &MockRepository{
+	repo := &depository.MockRepository{
 		Err: errors.New("bad error"),
 	}
-
 	RegisterAdminRoutes(log.NewNopLogger(), svc, repo)
 
 	depID := base.ID()
@@ -116,9 +111,7 @@ func TestDepository__overrideDepositoryStatusErr(t *testing.T) {
 }
 
 func TestDepository__adminStatusUpdate(t *testing.T) {
-	svc := moovadmin.NewServer(":0")
-	go svc.Listen()
-	defer svc.Shutdown()
+	svc := admintest.Server(t)
 
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
@@ -126,7 +119,7 @@ func TestDepository__adminStatusUpdate(t *testing.T) {
 	depID, userID := base.ID(), id.User(base.ID())
 
 	keeper := secrets.TestStringKeeper(t)
-	repo := NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
+	repo := depository.NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
 
 	now := base.NewTime(time.Now())
 	dep := &model.Depository{

@@ -78,6 +78,11 @@ func (a *ODFIAccount) Metadata() (*model.Originator, *model.Depository) {
 		Identification:    util.Or(os.Getenv("ODFI_IDENTIFICATION"), "001"),
 		Metadata:          "Moov - paygate micro-deposits",
 	}
+
+	fmt.Printf("a=%#v\n", a)
+	fmt.Printf("keeper=%#v\n", a.keeper)
+	fmt.Printf("accountNumber=%#v\n", a.accountNumber)
+
 	num, err := a.keeper.EncryptString(a.accountNumber)
 	if err != nil {
 		return nil, nil

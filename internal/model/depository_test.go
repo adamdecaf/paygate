@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/internal/secrets"
+	"github.com/moov-io/paygate/pkg/id"
 )
 
 func TestDepository__types(t *testing.T) {
@@ -39,4 +41,27 @@ func TestDepositoriesHolderType__json(t *testing.T) {
 	if err := json.Unmarshal(in, &ht); err == nil {
 		t.Error("expected error")
 	}
+}
+
+func TestDepositoryJSON(t *testing.T) {
+	keeper := secrets.TestStringKeeper(t)
+	num, _ := keeper.EncryptString("123")
+	bs, err := json.MarshalIndent(Depository{
+		ID:                     id.Depository(base.ID()),
+		BankName:               "moov, inc",
+		Holder:                 "Jane Smith",
+		HolderType:             Individual,
+		Type:                   Checking,
+		RoutingNumber:          "987654320",
+		EncryptedAccountNumber: num,
+		Status:                 DepositoryVerified,
+		Metadata:               "extra",
+		Keeper:                 keeper,
+	}, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Logf("  %s", string(bs))
+	// TODO(adam): need to check field params
 }

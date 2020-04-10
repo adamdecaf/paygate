@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package depository
+package depadmin
 
 import (
 	"encoding/json"
@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	moovhttp "github.com/moov-io/base/http"
+	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/route"
 
@@ -20,7 +21,7 @@ type request struct {
 	Status model.DepositoryStatus `json:"status"`
 }
 
-func overrideDepositoryStatus(logger log.Logger, depRepo Repository) http.HandlerFunc {
+func overrideDepositoryStatus(logger log.Logger, repo depository.Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w = route.Wrap(logger, w, r)
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -30,7 +31,7 @@ func overrideDepositoryStatus(logger log.Logger, depRepo Repository) http.Handle
 			return
 		}
 
-		depID, requestID := GetID(r), moovhttp.GetRequestID(r)
+		depID, requestID := depository.GetID(r), moovhttp.GetRequestID(r)
 
 		var req request
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -39,17 +40,17 @@ func overrideDepositoryStatus(logger log.Logger, depRepo Repository) http.Handle
 		}
 
 		// read the depository so we know it exists
-		dep, err := depRepo.GetDepository(depID)
+		dep, err := repo.GetDepository(depID)
 		if err != nil {
 			moovhttp.Problem(w, err)
 			return
 		}
-		if err := depRepo.UpdateDepositoryStatus(depID, req.Status); err != nil {
+		if err := repo.UpdateDepositoryStatus(depID, req.Status); err != nil {
 			moovhttp.Problem(w, err)
 			return
 		}
 		// re-read for marshaling
-		dep, err = depRepo.GetUserDepository(depID, dep.UserID)
+		dep, err = repo.GetUserDepository(depID, dep.UserID)
 		if err != nil {
 			moovhttp.Problem(w, err)
 			return
