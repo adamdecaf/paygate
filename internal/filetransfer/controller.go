@@ -174,14 +174,12 @@ func (c *Controller) findAgentType(routingNumber string) string {
 	return "unknown"
 }
 
-type RemovalChan chan interface{}
-
 // StartPeriodicFileOperations will block forever to periodically download incoming and returned ACH files while also merging
 // and uploading ACH files to their remote SFTP server. forceUpload is a channel for manually triggering the "merge and upload"
 // portion of this pooling loop, which is used by admin endpoints and to make testing easier.
 //
 // Uploads will be completed before their cutoff time which is set for a given ABA routing number.
-func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncoming admin.FlushChan, flushOutgoing admin.FlushChan, removal RemovalChan) {
+func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncoming admin.FlushChan, flushOutgoing admin.FlushChan) {
 	tick := time.NewTicker(c.interval)
 	defer tick.Stop()
 
@@ -233,9 +231,6 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 				errs <- fmt.Errorf("mergeAndUploadFiles: %v", err)
 			}
 			finish(req, &wg, errs)
-
-		case req := <-removal:
-			c.handleRemoval(req)
 
 		case <-tick.C:
 			// This is triggered by the time.Ticker (which accounts for delays) so let's download and upload files.

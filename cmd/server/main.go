@@ -166,14 +166,6 @@ func main() {
 	// micro-deposit repository
 	microDepositRepo := microdeposit.NewRepository(cfg.Logger, db)
 
-	achStorageDir := setupACHStorageDir(cfg.Logger)
-	fileTransferController, err := filetransfer.NewController(cfg, achStorageDir, fileTransferRepo, depositoryRepo, gatewaysRepo, microDepositRepo, originatorsRepo, receiverRepo, transferRepo, odfiAccount, accountsClient)
-	if err != nil {
-		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))
-	}
-	shutdownFileTransferController, removalChan := setupFileTransferController(cfg.Logger, fileTransferController, depositoryRepo, fileTransferRepo, microDepositRepo, transferRepo, adminServer)
-	defer shutdownFileTransferController()
-
 	// Register the depository admin routes
 	depadmin.RegisterRoutes(cfg.Logger, adminServer, depositoryRepo)
 
@@ -212,6 +204,15 @@ func main() {
 	)
 	xferRouter.RegisterRoutes(handler)
 	xferadmin.RegisterRoutes(cfg.Logger, adminServer, transferRepo)
+
+	// Async FileTransfer controller
+	achStorageDir := setupACHStorageDir(cfg.Logger)
+	fileTransferController, err := filetransfer.NewController(cfg, achStorageDir, fileTransferRepo, depositoryRepo, gatewaysRepo, microDepositRepo, originatorsRepo, receiverRepo, transferRepo, odfiAccount, accountsClient)
+	if err != nil {
+		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))
+	}
+	shutdownFileTransferController := setupFileTransferController(cfg.Logger, fileTransferController, depositoryRepo, fileTransferRepo, microDepositRepo, transferRepo, adminServer)
+	defer shutdownFileTransferController()
 
 	// Check to see if our -http.addr flag has been overridden
 	if v := os.Getenv("HTTP_BIND_ADDRESS"); v != "" {
@@ -340,25 +341,24 @@ func setupFileTransferController(
 	microDepositRepo microdeposit.Repository,
 	transferRepo transfers.Repository,
 	svc *admin.Server,
-) (context.CancelFunc, filetransfer.RemovalChan) {
+) context.CancelFunc {
 	ctx, cancelFileSync := context.WithCancel(context.Background())
 
 	if controller == nil {
-		return cancelFileSync, nil
+		return cancelFileSync
 	}
 
 	// setup buffered channels which only allow one concurrent operation
 	flushIncoming := make(ftadmin.FlushChan, 1)
 	flushOutgoing := make(ftadmin.FlushChan, 1)
-	removals := make(filetransfer.RemovalChan, 1)
 
 	// start our controller's operations in an anon goroutine
-	go controller.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing, removals)
+	go controller.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing)
 
 	config.AddFileTransferConfigRoutes(logger, svc, fileTransferRepo)
 	ftadmin.RegisterAdminRoutes(logger, svc, flushIncoming, flushOutgoing, func() ([]string, error) {
 		return controller.GetMergedFilepaths()
 	})
 
-	return cancelFileSync, removals
+	return cancelFileSync
 }

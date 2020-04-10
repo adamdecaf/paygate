@@ -278,10 +278,9 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 	}
 
 	flushIncoming, flushOutgoing := make(admin.FlushChan, 1), make(admin.FlushChan, 1)
-	removal := make(RemovalChan, 1)
 	ctx, cancelFileSync := context.WithCancel(context.Background())
 
-	go controller.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing, removal) // async call to register the polling loop
+	go controller.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing) // async call to register the polling loop
 	// trigger the calls
 	flushIncoming <- &admin.Request{}
 	flushOutgoing <- &admin.Request{}
