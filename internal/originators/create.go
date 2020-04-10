@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-kit/kit/log"
+	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/internal/accounts"
 	"github.com/moov-io/paygate/internal/customers"
@@ -18,9 +20,6 @@ import (
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/route"
 	"github.com/moov-io/paygate/pkg/id"
-
-	"github.com/go-kit/kit/log"
-	"github.com/gorilla/mux"
 )
 
 type originatorRequest struct {
@@ -51,36 +50,6 @@ func (r originatorRequest) missingFields() error {
 		return errors.New("missing originatorRequest.DefaultDepository")
 	}
 	return nil
-}
-
-func AddOriginatorRoutes(logger log.Logger, r *mux.Router, accountsClient accounts.Client, customersClient customers.Client, depositoryRepo depository.Repository, originatorRepo Repository) {
-	r.Methods("GET").Path("/originators").HandlerFunc(getUserOriginators(logger, originatorRepo))
-	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(logger, accountsClient, customersClient, depositoryRepo, originatorRepo))
-
-	r.Methods("GET").Path("/originators/{originatorId}").HandlerFunc(getUserOriginator(logger, originatorRepo))
-	r.Methods("PATCH").Path("/originators/{originatorId}").HandlerFunc(updateUserOriginator(logger, originatorRepo))
-	r.Methods("DELETE").Path("/originators/{originatorId}").HandlerFunc(deleteUserOriginator(logger, originatorRepo))
-}
-
-func getUserOriginators(logger log.Logger, originatorRepo Repository) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(logger, w, r)
-		if responder == nil {
-			return
-		}
-
-		origs, err := originatorRepo.getUserOriginators(responder.XUserID)
-		if err != nil {
-			responder.Log("originators", fmt.Sprintf("problem reading user originators: %v", err))
-			responder.Problem(err)
-			return
-		}
-
-		responder.Respond(func(w http.ResponseWriter) {
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(origs)
-		})
-	}
 }
 
 func readOriginatorRequest(r *http.Request) (originatorRequest, error) {
@@ -166,104 +135,31 @@ func createUserOriginator(logger log.Logger, accountsClient accounts.Client, cus
 	}
 }
 
-func getUserOriginator(logger log.Logger, originatorRepo Repository) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(logger, w, r)
-		if responder == nil {
-			return
-		}
-
-		origID := getOriginatorId(r)
-		orig, err := originatorRepo.GetUserOriginator(origID, responder.XUserID)
-		if err != nil {
-			responder.Log("originators", fmt.Sprintf("problem reading originator=%s: %v", origID, err))
-			responder.Problem(err)
-			return
-		}
-		responder.Respond(func(w http.ResponseWriter) {
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(orig)
-		})
+func (r *SQLOriginatorRepo) createUserOriginator(userID id.User, req originatorRequest) (*model.Originator, error) {
+	now := time.Now()
+	orig := &model.Originator{
+		ID:                model.OriginatorID(base.ID()),
+		DefaultDepository: req.DefaultDepository,
+		Identification:    req.Identification,
+		CustomerID:        req.customerID,
+		Metadata:          req.Metadata,
+		Created:           base.NewTime(now),
+		Updated:           base.NewTime(now),
 	}
-}
-
-func updateUserOriginator(logger log.Logger, originatorRepo Repository) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(logger, w, r)
-		if responder == nil {
-			return
-		}
-
-		req, err := readOriginatorRequest(r)
-		if err != nil {
-			responder.Log("originators", err.Error())
-			responder.Problem(err)
-			return
-		}
-
-		origID := getOriginatorId(r)
-		if origID == "" {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-
-		orig, err := originatorRepo.GetUserOriginator(origID, responder.XUserID)
-		if err != nil {
-			responder.Problem(err)
-			return
-		}
-		if orig == nil {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-
-		if req.DefaultDepository != "" {
-			orig.DefaultDepository = req.DefaultDepository
-		}
-		if req.Identification != "" {
-			orig.Identification = req.Identification
-		}
-		if req.Metadata != "" {
-			orig.Metadata = req.Metadata
-		}
-		if err := orig.Validate(); err != nil {
-			responder.Problem(err)
-			return
-		}
-
-		if err := originatorRepo.updateUserOriginator(responder.XUserID, orig); err != nil {
-			responder.Problem(err)
-			return
-		}
-
-		responder.Respond(func(w http.ResponseWriter) {
-			w.WriteHeader(http.StatusOK)
-		})
+	if err := orig.Validate(); err != nil {
+		return nil, err
 	}
-}
 
-func deleteUserOriginator(logger log.Logger, originatorRepo Repository) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(logger, w, r)
-		if responder == nil {
-			return
-		}
-
-		origID := getOriginatorId(r)
-		if err := originatorRepo.deleteUserOriginator(origID, responder.XUserID); err != nil {
-			responder.Log("originators", fmt.Sprintf("problem deleting originator=%s: %v", origID, err))
-			responder.Problem(err)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
+	query := `insert into originators (originator_id, user_id, default_depository, identification, customer_id, metadata, created_at, last_updated_at) values (?, ?, ?, ?, ?, ?, ?, ?)`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
 	}
-}
+	defer stmt.Close()
 
-func getOriginatorId(r *http.Request) model.OriginatorID {
-	vars := mux.Vars(r)
-	v, ok := vars["originatorId"]
-	if ok {
-		return model.OriginatorID(v)
+	_, err = stmt.Exec(orig.ID, userID, orig.DefaultDepository, orig.Identification, orig.CustomerID, orig.Metadata, now, now)
+	if err != nil {
+		return nil, err
 	}
-	return model.OriginatorID("")
+	return orig, nil
 }
