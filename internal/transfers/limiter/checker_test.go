@@ -11,6 +11,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/pkg/id"
 )
 
@@ -37,7 +38,7 @@ func TestIntegration(t *testing.T) {
 		}
 
 		// To avoid cyclic deps with the 'transfers' package we are writing this insert sql
-		query := `insert into transfers (amount, user_id, created_at) values ("USD 2325.12", ?, ?);`
+		query := `insert into transfers (amount, user_id, created_at) values (?, ?, ?);`
 		stmt, err := lc.db.Prepare(query)
 		if err != nil {
 			t.Fatal(err)
@@ -45,7 +46,8 @@ func TestIntegration(t *testing.T) {
 		defer stmt.Close()
 
 		// write a transfer
-		if _, err := stmt.Exec(userID, time.Now()); err != nil {
+		amt, _ := model.NewAmount("USD", "2325.12")
+		if _, err := stmt.Exec(amt.String(), userID, time.Now()); err != nil {
 			t.Fatal(err)
 		}
 
@@ -58,7 +60,7 @@ func TestIntegration(t *testing.T) {
 			t.Fatal(err)
 		} else {
 			if int(total*100) != 232512 {
-				t.Errorf("got %.2f", total)
+				t.Errorf("%#v: got %.2f", lc.db, total)
 			}
 		}
 	}
@@ -80,6 +82,7 @@ func TestIntegration(t *testing.T) {
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
 
+	lc.db = mysqlDB.DB
 	lc.userTransferSumSQL = mysqlSumUserTransfers
 	check(t, lc)
 }

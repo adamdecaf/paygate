@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -116,16 +117,16 @@ func (lc *sqlChecker) userTransferSum(userID id.User, newerThan time.Time) (floa
 	}
 	defer stmt.Close()
 
-	var total *float64
+	var total *string
 	if err := stmt.QueryRow(userID, newerThan).Scan(&total); err != nil {
 		if err == sql.ErrNoRows {
-			fmt.Println("A")
 			return 0.0, nil
 		}
 		return -1.0, fmt.Errorf("user transfers query: %v", err)
 	}
 	if total != nil {
-		return *total, nil
+		f, _ := strconv.ParseFloat(*total, 64)
+		return f, nil
 	}
 	return 0.0, nil
 }

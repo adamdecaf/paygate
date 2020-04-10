@@ -34,6 +34,7 @@ BUG FIXES
 - depository: in admin update status route read userID from path
 - originators,receivers: return null BirthDate,Address if empty
 - filetransfer,transfers: update status once Transfers are merged, not in MarkTransferAsMerged
+- transfers: fix amount storage truncation
 
 BUILD
 
