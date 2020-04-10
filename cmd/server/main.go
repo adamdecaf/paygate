@@ -25,6 +25,7 @@ import (
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/depository"
+	"github.com/moov-io/paygate/internal/depository/depadmin"
 	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
 	"github.com/moov-io/paygate/internal/events"
 	"github.com/moov-io/paygate/internal/features"
@@ -171,8 +172,8 @@ func main() {
 	shutdownFileTransferController, removalChan := setupFileTransferController(cfg.Logger, fileTransferController, depositoryRepo, fileTransferRepo, microDepositRepo, transferRepo, adminServer)
 	defer shutdownFileTransferController()
 
-	// Register the micro-deposit admin route
-	depository.RegisterAdminRoutes(cfg.Logger, adminServer, depositoryRepo)
+	// Register the depository admin routes
+	depadmin.RegisterRoutes(cfg.Logger, adminServer, depositoryRepo)
 
 	// Create HTTP handler
 	handler := mux.NewRouter()

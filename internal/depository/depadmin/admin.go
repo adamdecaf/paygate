@@ -11,7 +11,7 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-// RegisterAdminRoutes will add HTTP handlers for paygate's admin HTTP server
-func RegisterAdminRoutes(logger log.Logger, svc *admin.Server, repo depository.Repository) {
+// RegisterRoutes will add HTTP handlers for paygate's admin HTTP server
+func RegisterRoutes(logger log.Logger, svc *admin.Server, repo depository.Repository) {
 	svc.AddHandler("/depositories/{depositoryId}", overrideDepositoryStatus(logger, repo))
 }

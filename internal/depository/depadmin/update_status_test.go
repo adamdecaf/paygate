@@ -50,7 +50,7 @@ func TestDepository__overrideDepositoryStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	RegisterAdminRoutes(log.NewNopLogger(), svc, repo)
+	RegisterRoutes(log.NewNopLogger(), svc, repo)
 
 	addr := fmt.Sprintf("http://%s/depositories/%s", svc.BindAddr(), depID)
 	body := strings.NewReader(`{"status": "rejected"}`)
@@ -83,7 +83,7 @@ func TestDepository__overrideDepositoryStatusErr(t *testing.T) {
 	repo := &depository.MockRepository{
 		Err: errors.New("bad error"),
 	}
-	RegisterAdminRoutes(log.NewNopLogger(), svc, repo)
+	RegisterRoutes(log.NewNopLogger(), svc, repo)
 
 	depID := base.ID()
 	addr := fmt.Sprintf("http://%s/depositories/%s", svc.BindAddr(), depID)
@@ -142,7 +142,7 @@ func TestDepository__adminStatusUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	RegisterAdminRoutes(log.NewNopLogger(), svc, repo)
+	RegisterRoutes(log.NewNopLogger(), svc, repo)
 
 	conf := admin.NewConfiguration()
 	conf.Host = svc.BindAddr()
