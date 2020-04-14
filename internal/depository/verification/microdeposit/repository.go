@@ -79,6 +79,28 @@ func (r *SQLRepo) GetMicroDepositsForUser(id id.Depository, userID id.User) ([]*
 	return accumulateMicroDeposits(rows)
 }
 
+func accumulateMicroDeposits(rows *sql.Rows) ([]*Credit, error) {
+	var microDeposits []*Credit
+	for rows.Next() {
+		fileID, transactionID := "", ""
+		var value string
+		if err := rows.Scan(&value, &fileID, &transactionID); err != nil {
+			continue
+		}
+
+		amt := &model.Amount{}
+		if err := amt.FromString(value); err != nil {
+			continue
+		}
+		microDeposits = append(microDeposits, &Credit{
+			Amount:        *amt,
+			FileID:        fileID,
+			TransactionID: transactionID,
+		})
+	}
+	return microDeposits, rows.Err()
+}
+
 // InitiateMicroDeposits will save the provided []Amount into our database. If amounts have already been saved then
 // no new amounts will be added.
 func (r *SQLRepo) InitiateMicroDeposits(id id.Depository, userID id.User, microDeposits []*Credit) error {

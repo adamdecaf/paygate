@@ -41,7 +41,6 @@ func readTransferFilterParams(r *http.Request) transferFilterParams {
 	}
 	if v := q.Get("endDate"); v != "" {
 		params.EndDate, _ = time.Parse(base.ISO8601Format, v)
-		fmt.Printf("params.EndDate=%v\n", params.EndDate)
 	}
 	if status := model.TransferStatus(q.Get("status")); status.Validate() == nil {
 		params.Status = status

@@ -39,7 +39,8 @@ func listMergedFiles(logger log.Logger, getFiles func() ([]string, error)) http.
 	return func(w http.ResponseWriter, r *http.Request) {
 		files, err := getFiles()
 		if err != nil {
-			fmt.Printf("error=%v\n", err)
+			moovhttp.Problem(w, err)
+			return
 		}
 
 		var out []mergedFile
