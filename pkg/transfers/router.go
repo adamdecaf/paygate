@@ -16,7 +16,6 @@ import (
 	"github.com/moov-io/base"
 	moovcustomers "github.com/moov-io/customers/client"
 	"github.com/moov-io/paygate/pkg/client"
-	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/customers"
 	"github.com/moov-io/paygate/pkg/customers/accounts"
 	"github.com/moov-io/paygate/pkg/model"
@@ -45,7 +44,7 @@ type Router struct {
 func NewRouter(
 	logger log.Logger,
 	repo Repository,
-	tenantRepo tenants.Repository,
+	companyIDLookup tenants.Lookup,
 	customersClient customers.Client,
 	accountDecryptor accounts.Decryptor,
 	fundStrategy fundflow.Strategy,
@@ -57,7 +56,7 @@ func NewRouter(
 		Publisher: pub,
 
 		GetUserTransfers:   GetUserTransfers(logger, repo),
-		CreateUserTransfer: CreateUserTransfer(logger, repo, tenantRepo, customersClient, accountDecryptor, fundStrategy, pub),
+		CreateUserTransfer: CreateUserTransfer(logger, repo, companyIDLookup, customersClient, accountDecryptor, fundStrategy, pub),
 		GetUserTransfer:    GetUserTransfer(logger, repo),
 		DeleteUserTransfer: DeleteUserTransfer(logger, repo, pub),
 	}
@@ -135,7 +134,7 @@ func GetUserTransfers(logger log.Logger, repo Repository) http.HandlerFunc {
 func CreateUserTransfer(
 	logger log.Logger,
 	repo Repository,
-	tenantRepo tenants.Repository,
+	companyIDLookup tenants.Lookup,
 	customersClient customers.Client,
 	accountDecryptor accounts.Decryptor,
 	fundStrategy fundflow.Strategy,
@@ -143,6 +142,12 @@ func CreateUserTransfer(
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
+
+		companyID, err := companyIDLookup.GetCompanyID(r)
+		if companyID == "" || err != nil {
+			responder.Problem(fmt.Errorf("missing Tenant / CompanyID: %v", err))
+			return
+		}
 
 		var req client.CreateTransfer
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -190,7 +195,7 @@ func CreateUserTransfer(
 				return
 			}
 
-			files, err := fundStrategy.Originate(config.CompanyID, transfer, source, destination)
+			files, err := fundStrategy.Originate(companyID, transfer, source, destination)
 			if err != nil {
 				responder.Problem(err)
 				return

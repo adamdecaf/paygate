@@ -35,7 +35,7 @@ func NewRouter(
 	cfg *config.Config,
 	repo Repository,
 	transferRepo transfers.Repository,
-	tenantRepo tenants.Repository,
+	companyIDLookup tenants.Lookup,
 	customersClient customers.Client,
 	accountDecryptor accounts.Decryptor,
 	fundStrategy fundflow.Strategy,
@@ -50,7 +50,7 @@ func NewRouter(
 	}
 	config := *cfg.Validation.MicroDeposits
 	return &Router{
-		InitiateMicroDeposits:   InitiateMicroDeposits(config, cfg.Logger, repo, transferRepo, customersClient, accountDecryptor, fundStrategy, pub),
+		InitiateMicroDeposits:   InitiateMicroDeposits(config, cfg.Logger, repo, companyIDLookup, transferRepo, customersClient, accountDecryptor, fundStrategy, pub),
 		GetMicroDeposits:        GetMicroDeposits(cfg.Logger, repo),
 		GetAccountMicroDeposits: GetAccountMicroDeposits(cfg.Logger, repo),
 	}
@@ -66,6 +66,7 @@ func InitiateMicroDeposits(
 	cfg config.MicroDeposits,
 	logger log.Logger,
 	repo Repository,
+	companyIDLookup tenants.Lookup,
 	transferRepo transfers.Repository,
 	customersClient customers.Client,
 	accountDecryptor accounts.Decryptor,
@@ -78,6 +79,12 @@ func InitiateMicroDeposits(
 			var req client.CreateMicroDeposits
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				responder.Problem(err)
+				return
+			}
+
+			companyID, err := companyIDLookup.GetCompanyID(r)
+			if companyID == "" || err != nil {
+				responder.Problem(fmt.Errorf("missing Tenant / CompanyID: %v", err))
 				return
 			}
 
@@ -99,7 +106,7 @@ func InitiateMicroDeposits(
 				return
 			}
 
-			micro, err := createMicroDeposits(cfg, responder.XUserID, src, dest, transferRepo, accountDecryptor, fundStrategy, pub)
+			micro, err := createMicroDeposits(cfg, responder.XUserID, companyID, src, dest, transferRepo, accountDecryptor, fundStrategy, pub)
 			if err != nil {
 				responder.Log("micro-deposits", fmt.Sprintf("ERROR creating micro-deposits: %v", err))
 				responder.Problem(err)

@@ -51,13 +51,15 @@ var (
 		},
 	}
 
-	tenantRepo = &tenants.MockRepository{}
-
 	fakePublisher = pipeline.NewMockPublisher()
 
 	mockStrategy = &fundflow.MockStrategy{}
 
 	mockDecryptor = &accounts.MockDecryptor{Number: "12345"}
+
+	mockCompanyIDLookup = &tenants.MockLookup{
+		CompanyID: "Moov123456",
+	}
 )
 
 func mockCustomersClient() *customers.MockClient {
@@ -117,7 +119,7 @@ func TestRouter__NotImplemented(t *testing.T) {
 	}
 
 	r := mux.NewRouter()
-	router := NewRouter(cfg, repo, mockTransferRepo, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(cfg, repo, mockTransferRepo, mockCompanyIDLookup, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("/micro-deposits/%s", base.ID()), nil)
@@ -153,7 +155,7 @@ func TestRouter__InitiateMicroDeposits(t *testing.T) {
 	}
 
 	r := mux.NewRouter()
-	router := NewRouter(cfg, repo, mockTransferRepo, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(cfg, repo, mockTransferRepo, mockCompanyIDLookup, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
@@ -185,7 +187,7 @@ func TestRouter__InitiateMicroDepositsErr(t *testing.T) {
 	repo := &mockRepository{Err: errors.New("bad request")}
 
 	r := mux.NewRouter()
-	router := NewRouter(cfg, repo, mockTransferRepo, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(cfg, repo, mockTransferRepo, mockCompanyIDLookup, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
@@ -207,7 +209,7 @@ func TestRouter__GetMicroDeposits(t *testing.T) {
 	}
 
 	r := mux.NewRouter()
-	router := NewRouter(cfg, repo, mockTransferRepo, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(cfg, repo, mockTransferRepo, mockCompanyIDLookup, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
@@ -231,7 +233,7 @@ func TestRouter__GetMicroDepositsEmpty(t *testing.T) {
 	repo := &mockRepository{}
 
 	r := mux.NewRouter()
-	router := NewRouter(cfg, repo, mockTransferRepo, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(cfg, repo, mockTransferRepo, mockCompanyIDLookup, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
@@ -255,7 +257,7 @@ func TestRouter__GetMicroDepositsErr(t *testing.T) {
 	repo := &mockRepository{Err: errors.New("bad error")}
 
 	r := mux.NewRouter()
-	router := NewRouter(cfg, repo, mockTransferRepo, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(cfg, repo, mockTransferRepo, mockCompanyIDLookup, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
@@ -277,7 +279,7 @@ func TestRouter__GetAccountMicroDeposits(t *testing.T) {
 	}
 
 	r := mux.NewRouter()
-	router := NewRouter(cfg, repo, mockTransferRepo, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(cfg, repo, mockTransferRepo, mockCompanyIDLookup, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
@@ -301,7 +303,7 @@ func TestRouter__GetAccountMicroDepositsEmpty(t *testing.T) {
 	repo := &mockRepository{}
 
 	r := mux.NewRouter()
-	router := NewRouter(cfg, repo, mockTransferRepo, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(cfg, repo, mockTransferRepo, mockCompanyIDLookup, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
@@ -325,7 +327,7 @@ func TestRouter__GetAccountMicroDepositsErr(t *testing.T) {
 	repo := &mockRepository{Err: errors.New("bad error")}
 
 	r := mux.NewRouter()
-	router := NewRouter(cfg, repo, mockTransferRepo, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(cfg, repo, mockTransferRepo, mockCompanyIDLookup, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)

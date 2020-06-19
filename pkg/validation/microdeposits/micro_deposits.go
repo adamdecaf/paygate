@@ -23,6 +23,7 @@ import (
 func createMicroDeposits(
 	cfg config.MicroDeposits,
 	userID string,
+	companyID string,
 	src fundflow.Source,
 	dest fundflow.Destination,
 	repo transfers.Repository,
@@ -45,12 +46,12 @@ func createMicroDeposits(
 	}
 
 	// originate two credits
-	if xfer, err := originate(cfg, userID, amt1, src, dest, repo, strategy, pub); err != nil {
+	if xfer, err := originate(cfg, userID, amt1, companyID, src, dest, repo, strategy, pub); err != nil {
 		return nil, err
 	} else {
 		micro.TransferIDs = append(micro.TransferIDs, xfer.TransferID)
 	}
-	if xfer, err := originate(cfg, userID, amt2, src, dest, repo, strategy, pub); err != nil {
+	if xfer, err := originate(cfg, userID, amt2, companyID, src, dest, repo, strategy, pub); err != nil {
 		return nil, err
 	} else {
 		micro.TransferIDs = append(micro.TransferIDs, xfer.TransferID)
@@ -65,7 +66,7 @@ func createMicroDeposits(
 	if err != nil {
 		return micro, err
 	}
-	if xfer, err := originate(cfg, userID, sum.String(), src, dest, repo, strategy, pub); err != nil {
+	if xfer, err := originate(cfg, userID, sum.String(), companyID, src, dest, repo, strategy, pub); err != nil {
 		return micro, err
 	} else {
 		// Add the Transfer onto the MicroDeposit
@@ -86,6 +87,7 @@ func originate(
 	cfg config.MicroDeposits,
 	userID string,
 	amt string,
+	companyID string,
 	source fundflow.Source,
 	destination fundflow.Destination,
 	transferRepo transfers.Repository,
@@ -100,7 +102,7 @@ func originate(
 	}
 
 	// Originate ACH file(s) and send off to our Transfer publisher
-	files, err := fundStrategy.Originate(config.CompanyID, xfer, source, destination)
+	files, err := fundStrategy.Originate(companyID, xfer, source, destination)
 	if err != nil {
 		return nil, err
 	}

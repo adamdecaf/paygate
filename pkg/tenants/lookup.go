@@ -11,15 +11,20 @@ import (
 )
 
 type Lookup interface {
-	TenantID(req *http.Request) (string, error)
+	GetCompanyID(req *http.Request) (string, error)
 }
 
-func NewLookup() (Lookup, error) {
-	return nil, nil
+func NewLookup(repo Repository) (Lookup, error) {
+	return &lookupImpl{
+		repo: repo,
+	}, nil
 }
 
-type AuthLookup struct{}
+type lookupImpl struct {
+	repo Repository
+}
 
-func (l *AuthLookup) TenantID(req *http.Request) (string, error) {
-	return util.Or(req.Header.Get("X-Tenant"), req.Header.Get("X-Tenant-ID")), nil
+func (l *lookupImpl) GetCompanyID(req *http.Request) (string, error) {
+	tenantID := util.Or(req.Header.Get("X-Tenant"), req.Header.Get("X-Tenant-ID"))
+	return l.repo.GetCompanyIdentification(tenantID)
 }

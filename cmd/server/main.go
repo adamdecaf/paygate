@@ -165,16 +165,20 @@ func main() {
 	tenantsRepo := tenants.NewRepo(db)
 	tenants.NewRouter(cfg.Logger, tenantsRepo).RegisterRoutes(handler)
 	tenantadmin.RegisterRoutes(cfg.Logger, adminServer, tenantsRepo)
+	companyIDLookup, err := tenants.NewLookup(tenantsRepo)
+	if err != nil {
+		panic(fmt.Sprintf("ERROR problem creating companyID lookup: %v", err))
+	}
 
 	// Transfers
 	transfersRepo := transfers.NewRepo(db)
 	defer transfersRepo.Close()
-	transfers.NewRouter(cfg.Logger, transfersRepo, tenantsRepo, customersClient, accountDecryptor, fundflowStrategy, transferPublisher).RegisterRoutes(handler)
+	transfers.NewRouter(cfg.Logger, transfersRepo, companyIDLookup, customersClient, accountDecryptor, fundflowStrategy, transferPublisher).RegisterRoutes(handler)
 	transferadmin.RegisterRoutes(cfg.Logger, adminServer, transfersRepo)
 
 	// Micro-Deposit Validation
 	microDepositRepo := microdeposits.NewRepo(db)
-	microdeposits.NewRouter(cfg, microDepositRepo, transfersRepo, tenantsRepo, customersClient, accountDecryptor, fundflowStrategy, transferPublisher).RegisterRoutes(handler)
+	microdeposits.NewRouter(cfg, microDepositRepo, transfersRepo, companyIDLookup, customersClient, accountDecryptor, fundflowStrategy, transferPublisher).RegisterRoutes(handler)
 
 	// Create main HTTP server
 	serve := &http.Server{

@@ -9,13 +9,13 @@ import (
 )
 
 type MockLookup struct {
-	Tenant string
-	Err    error
+	CompanyID string
+	Err       error
 }
 
-func (l *MockLookup) TenantID(_ *http.Request) (string, error) {
+func (l *MockLookup) GetCompanyID(_ *http.Request) (string, error) {
 	if l.Err != nil {
 		return "", l.Err
 	}
-	return l.Tenant, nil
+	return l.CompanyID, nil
 }
